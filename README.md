@@ -4,8 +4,8 @@
 
 An open protocol for trustless, streaming micropayments between AI consumers and providers.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://claude.ai/chat/LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://claude.ai/chat/CONTRIBUTING.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
 ---
 
@@ -65,7 +65,7 @@ DRAIN defines three components:
 
 The protocol intentionally excludes provider discovery, reputation systems, dispute resolution, and governance. These layers can be built independently.
 
-Full specification: [`docs/SPECIFICATION.md`](https://claude.ai/chat/docs/SPECIFICATION.md)
+Full specification: [`docs/SPECIFICATION.md`](./docs/SPECIFICATION.md)
 
 ## Project Structure
 
@@ -134,7 +134,7 @@ DRAIN is seeking contributors with experience in:
 * **Cryptography** – Payment channels and signature schemes
 * **Protocol Design** – Distributed systems and game theory
 
-See [`CONTRIBUTING.md`](https://claude.ai/chat/CONTRIBUTING.md) for guidelines.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for guidelines.
 
 ## Security
 
@@ -144,7 +144,7 @@ To report vulnerabilities, please email security@[tbd] or open a private securit
 
 ## License
 
-[MIT License](https://claude.ai/chat/LICENSE) – Attribution required.
+[MIT License](./LICENSE) – Attribution required.
 
 ---
 
