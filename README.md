@@ -78,7 +78,7 @@ DRAIN defines three components:
 
 The protocol intentionally excludes provider discovery, reputation systems, dispute resolution, and governance. These layers can be built independently.
 
-Full specification: [`docs/SPECIFICATION.md`](./docs/SPECIFICATION.md)
+Full specification: See `contracts/` for implementation details.
 
 ## Security Model
 
@@ -89,7 +89,20 @@ Full specification: [`docs/SPECIFICATION.md`](./docs/SPECIFICATION.md)
 | **Provider** | Overspending | `amount ≤ deposit` enforced on-chain |
 | **Provider** | Double-spend | USDC locked in contract, not wallet |
 
-EIP-712 signatures with `chainId` and `verifyingContract` prevent replay attacks.
+EIP-712 signatures with `chainId` and `verifyingContract` prevent replay attacks. OpenZeppelin ECDSA provides malleability protection.
+
+## Voucher Format
+
+```solidity
+// EIP-712 typed data
+struct Voucher {
+    bytes32 channelId;
+    uint256 amount;  // Cumulative total spent
+    uint256 nonce;   // Incrementing per voucher
+}
+```
+
+Consumer signs vouchers off-chain. Provider submits latest voucher to claim payment.
 
 ## Economics
 
@@ -114,47 +127,42 @@ Total overhead: **<$0.05** per session regardless of usage.
 
 ```
 drain/
-├── contracts/          # Solidity smart contracts (Foundry)
-├── sdk/                # TypeScript client SDK
-├── provider/           # Reference provider implementation
-├── docs/               # Protocol specification
-└── examples/           # Integration examples
+├── contracts/
+│   ├── src/DrainChannel.sol    # Core payment channel contract
+│   ├── test/                   # 40+ Foundry tests
+│   └── script/                 # Deploy scripts
+├── sdk/                        # TypeScript SDK (planned)
+└── provider/                   # Reference implementation (planned)
 ```
 
 ## Development Status
 
 | Component               | Status         |
 | ----------------------- | -------------- |
-| Protocol Specification  | ✅ Complete    |
-| Smart Contract          | 🚧 In Progress |
+| Smart Contract          | ✅ Complete    |
+| Test Suite (40+ tests)  | ✅ Complete    |
+| OpenZeppelin ECDSA      | ✅ Integrated  |
+| Testnet Deployment      | 📋 Planned     |
 | Client SDK              | 📋 Planned     |
 | Provider Implementation | 📋 Planned     |
-| Testnet Deployment      | 📋 Planned     |
 | Security Audit          | 📋 Planned     |
 
 ## Getting Started
 
 ```bash
 git clone https://github.com/kimbo128/DRAIN.git
-cd DRAIN
-```
+cd DRAIN/contracts
 
-### Contracts
-
-```bash
-cd contracts
-forge install
+# Install Foundry if needed: https://book.getfoundry.sh
 forge build
-forge test
+forge test -vvv
 ```
 
-### SDK
+### Test Coverage
 
 ```bash
-cd sdk
-pnpm install
-pnpm build
-pnpm test
+forge test --gas-report  # Gas optimization
+forge coverage           # Line coverage
 ```
 
 ## Target Chain
