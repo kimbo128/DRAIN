@@ -80,7 +80,35 @@ The protocol intentionally excludes provider discovery, reputation systems, disp
 
 Full specification: [`docs/SPECIFICATION.md`](./docs/SPECIFICATION.md)
 
-Research & design rationale: [`LEARNINGS.md`](./LEARNINGS.md)
+## Security Model
+
+| Party | Protected Against | How |
+|-------|-------------------|-----|
+| **Consumer** | Overcharging | Only signs amounts they agree to |
+| **Consumer** | Non-delivery | Stops signing, refunds after expiry |
+| **Provider** | Overspending | `amount ≤ deposit` enforced on-chain |
+| **Provider** | Double-spend | USDC locked in contract, not wallet |
+
+EIP-712 signatures with `chainId` and `verifyingContract` prevent replay attacks.
+
+## Economics
+
+| Role | Cost |
+|------|------|
+| **Consumer** | ~$0.02 open + provider rate + ~$0.02 close |
+| **Provider** | ~$0.02 claim gas, keeps 100% of fees |
+| **Protocol** | Zero fees |
+
+Total overhead: **<$0.05** per session regardless of usage.
+
+## What DRAIN Is NOT
+
+| ❌ | Why |
+|----|-----|
+| Token | No speculation, no governance drama |
+| Marketplace | Discovery is separate, built on top |
+| Reputation system | Out of scope, can be layered |
+| Upgradeable | Immutable contracts, no admin keys |
 
 ## Project Structure
 

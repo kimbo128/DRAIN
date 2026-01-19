@@ -45,3 +45,6 @@ lcov.info
 # Misc
 *.bak
 *.tmp
+
+# Internal docs (not public)
+LEARNINGS.md
