@@ -29,9 +29,9 @@ DRAIN enables permissionless, pay-per-token AI inference without intermediaries.
 │    Consumer                                      Provider        │
 │        │                                             │           │
 │        │───────── Request ──────────────────────────►│           │
-│        │◄──────── Token Stream ─────────────────────│           │
-│        │───────── Signed Voucher ──────────────────►│           │
-│        │◄──────── Token Stream ─────────────────────│           │
+│        │◄──────── Token Stream ──────────────────────│           │
+│        │───────── Signed Voucher ───────────────────►│           │
+│        │◄──────── Token Stream ──────────────────────│           │
 │        │                    ...                      │           │
 │                                                                  │
 └────────┼─────────────────────────────────────────────┼───────────┘
@@ -83,7 +83,7 @@ drain/
 | Component               | Status         |
 | ----------------------- | -------------- |
 | Protocol Specification  | ✅ Complete    |
-| Smart Contracts         | 🚧 In Progress |
+| Smart Contract          | 🚧 In Progress |
 | Client SDK              | 📋 Planned     |
 | Provider Implementation | 📋 Planned     |
 | Testnet Deployment      | 📋 Planned     |
@@ -116,31 +116,20 @@ pnpm test
 
 ## Target Chains
 
-| Chain    | Rationale                                |
-| -------- | ---------------------------------------- |
-| Base     | Low fees, growing ecosystem              |
-| Arbitrum | Low fees, high liquidity                 |
-| Polygon  | Low fees, established infrastructure     |
-| Ethereum | Maximum security for high-value channels |
+| Chain   | Rationale                            |
+| ------- | ------------------------------------ |
+| Polygon | Low fees, established infrastructure |
+| TBD     |                                      |
 
 Contracts will be deployed to identical addresses across all chains via CREATE2.
 
 ## Contributing
-
-DRAIN is seeking contributors with experience in:
-
-* **Solidity** – Smart contract development and security
-* **TypeScript** – SDK and tooling
-* **Cryptography** – Payment channels and signature schemes
-* **Protocol Design** – Distributed systems and game theory
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for guidelines.
 
 ## Security
 
 This project has not yet been audited. Use at your own risk.
-
-To report vulnerabilities, please email security@[tbd] or open a private security advisory.
 
 ## License
 
