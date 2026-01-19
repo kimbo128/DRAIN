@@ -2,12 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "./interfaces/IERC20.sol";
+import {ECDSA} from "../lib/openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 /// @title DrainChannel
 /// @notice Minimal payment channels for AI inference micropayments
 /// @dev Unidirectional channels with EIP-712 signed vouchers
 /// @dev Admin can configure USDC, then renounce to make contract immutable
 contract DrainChannel {
+    using ECDSA for bytes32;
     // ============ Constants ============
 
     bytes32 public constant DOMAIN_TYPEHASH =
@@ -190,7 +192,7 @@ contract DrainChannel {
         if (amount > channel.deposit) revert InvalidAmount();
         if (amount <= channel.claimed) revert InvalidAmount();
 
-        // Verify signature
+        // Verify signature (using OpenZeppelin ECDSA for malleability protection)
         bytes32 voucherHash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
@@ -199,8 +201,10 @@ contract DrainChannel {
             )
         );
 
-        address signer = _recoverSigner(voucherHash, signature);
-        if (signer != channel.consumer) revert InvalidSignature();
+        (address signer, ECDSA.RecoverError error) = ECDSA.tryRecover(voucherHash, signature);
+        if (error != ECDSA.RecoverError.NoError || signer != channel.consumer) {
+            revert InvalidSignature();
+        }
 
         // Calculate payout (only the delta from last claim)
         uint256 payout = amount - channel.claimed;
@@ -253,30 +257,4 @@ contract DrainChannel {
         return owner == address(0);
     }
 
-    // ============ Internal Functions ============
-
-    /// @notice Recover signer from signature
-    function _recoverSigner(
-        bytes32 hash,
-        bytes calldata signature
-    ) internal pure returns (address) {
-        if (signature.length != 65) revert InvalidSignature();
-
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        assembly {
-            r := calldataload(signature.offset)
-            s := calldataload(add(signature.offset, 32))
-            v := byte(0, calldataload(add(signature.offset, 64)))
-        }
-
-        if (v < 27) v += 27;
-
-        address signer = ecrecover(hash, v, r, s);
-        if (signer == address(0)) revert InvalidSignature();
-
-        return signer;
-    }
 }
