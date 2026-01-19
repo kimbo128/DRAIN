@@ -9,6 +9,19 @@ An open protocol for trustless, streaming micropayments between AI consumers and
 
 ---
 
+## Why DRAIN?
+
+Existing decentralized AI protocols require holding volatile tokens, creating speculation dynamics that overwhelm utility. Meanwhile, **78% of the world lacks credit cards**, and AI agents can't have bank accounts.
+
+DRAIN fills this gap: **stablecoin micropayments without tokens, complexity, or intermediaries.**
+
+| Problem | DRAIN Solution |
+|---------|----------------|
+| Token volatility | USDC-only, predictable pricing |
+| High fees | $0.02 per tx on Polygon |
+| AI agents can't pay | First-class programmatic support |
+| Credit card barriers | Permissionless crypto access |
+
 ## Overview
 
 DRAIN enables permissionless, pay-per-token AI inference without intermediaries. Users open payment channels with USDC, stream requests to any compatible provider, and settle on-chain only when needed.
@@ -67,6 +80,8 @@ The protocol intentionally excludes provider discovery, reputation systems, disp
 
 Full specification: [`docs/SPECIFICATION.md`](./docs/SPECIFICATION.md)
 
+Research & design rationale: [`LEARNINGS.md`](./LEARNINGS.md)
+
 ## Project Structure
 
 ```
@@ -114,14 +129,18 @@ pnpm build
 pnpm test
 ```
 
-## Target Chains
+## Target Chain
 
-| Chain   | Rationale                            |
-| ------- | ------------------------------------ |
-| Polygon | Low fees, established infrastructure |
-| TBD     |                                      |
+| Chain   | Tx Cost | Finality | USDC Liquidity |
+| ------- | ------- | -------- | -------------- |
+| Polygon | ~$0.02  | 5 sec    | $500M+ native  |
 
-Contracts will be deployed to identical addresses across all chains via CREATE2.
+**Why Polygon?**
+- Native USDC with Circle CCTP bridging
+- 5-second finality enables 10-minute challenge periods
+- Proven infrastructure, no reorgs
+
+Future chains via CREATE2 for identical addresses.
 
 ## Contributing
 
