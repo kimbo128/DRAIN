@@ -131,6 +131,28 @@ export default function Home() {
     setIsLoading(false);
   };
 
+  const closeChannel = async () => {
+    if (!channel) return;
+    
+    setIsLoading(true);
+    
+    // Simulate closing transaction
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const refundAmount = channel.remaining;
+    const spentAmount = channel.spent;
+    
+    setMessages(prev => [...prev, {
+      role: 'system',
+      content: `💰 Channel Closed!\n\n• Total spent: $${spentAmount} USDC (paid to provider)\n• Refunded: $${refundAmount} USDC (returned to you)\n• Messages sent: ${voucherCount}\n\nYour unused funds have been returned to your wallet. Open a new channel to continue chatting!`
+    }]);
+    
+    // Reset channel state
+    setChannel(null);
+    setVoucherCount(0);
+    setIsLoading(false);
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || !channel) return;
     
@@ -336,6 +358,43 @@ export default function Home() {
               </div>
             </div>
           </div>
+        ) : !channel && messages.length > 0 ? (
+          // Channel Closed - Show summary and option to reopen
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="bg-[#111] border border-[#222] rounded-2xl p-8 text-center">
+              <div className="text-5xl mb-4">✅</div>
+              <h2 className="text-2xl font-bold mb-2">Channel Closed</h2>
+              <p className="text-gray-400 mb-6">Your session has ended and unused funds have been refunded.</p>
+              
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setChannel(null);
+                }}
+                className="px-8 py-4 bg-gradient-to-r from-[#00D395] to-[#00B080] hover:from-[#00B080] hover:to-[#009970] text-black font-bold rounded-xl transition text-lg"
+              >
+                Open New Channel
+              </button>
+            </div>
+            
+            {/* Previous Chat History */}
+            <div className="bg-[#111] border border-[#222] rounded-2xl p-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-400">Previous Session</h3>
+              <div className="max-h-64 overflow-y-auto space-y-3">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`text-sm p-3 rounded-lg ${
+                    msg.role === 'user' 
+                      ? 'bg-[#00D395]/20 text-[#00D395] ml-8' 
+                      : msg.role === 'system'
+                      ? 'bg-[#1a1a2e] text-gray-400'
+                      : 'bg-[#1a1a1a] text-gray-300 mr-8'
+                  }`}>
+                    {msg.content.slice(0, 150)}{msg.content.length > 150 ? '...' : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : !channel ? (
           // Connected, No Channel
           <div className="max-w-lg mx-auto">
@@ -431,6 +490,13 @@ export default function Home() {
                   <div className="w-2 h-2 rounded-full bg-[#00D395] animate-pulse shadow-lg shadow-[#00D395]/50"></div>
                   <span className="text-sm text-gray-400">Channel Active</span>
                   <span className="text-xs text-gray-600 font-mono">{channel.id.slice(0, 10)}...</span>
+                  <button
+                    onClick={closeChannel}
+                    disabled={isLoading}
+                    className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition ml-2"
+                  >
+                    Close & Refund
+                  </button>
                 </div>
                 <div className="flex items-center gap-6 font-mono text-sm">
                   <div className="text-center">
