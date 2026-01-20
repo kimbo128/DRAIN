@@ -193,8 +193,9 @@ export default function Home() {
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0x89' }],
       });
-      setChainId(CHAIN_ID);
-      if (address) await fetchUSDCBalance(address);
+      // Get current chain to confirm switch
+      const newChain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+      setChainId(parseInt(newChain, 16));
     } catch (switchError: unknown) {
       const err = switchError as { code?: number };
       if (err.code === 4902) {
@@ -209,7 +210,8 @@ export default function Home() {
               blockExplorerUrls: ['https://polygonscan.com'],
             }],
           });
-          setChainId(CHAIN_ID);
+          const newChain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
+          setChainId(parseInt(newChain, 16));
         } catch (addError) {
           console.error('Failed to add Polygon:', addError);
         }
@@ -220,16 +222,33 @@ export default function Home() {
   const fetchUSDCBalance = async (addr: string) => {
     try {
       // Call balanceOf using eth_call
-      const data = '0x70a08231' + addr.slice(2).padStart(64, '0');
+      // balanceOf(address) selector = 0x70a08231
+      const paddedAddr = addr.toLowerCase().slice(2).padStart(64, '0');
+      const data = '0x70a08231' + paddedAddr;
+      
       const result = await window.ethereum!.request({
         method: 'eth_call',
         params: [{ to: USDC_ADDRESS, data }, 'latest'],
       }) as string;
-      setUsdcBalance(BigInt(result));
+      
+      // Handle empty result or 0x
+      if (!result || result === '0x' || result === '0x0') {
+        setUsdcBalance(0n);
+      } else {
+        setUsdcBalance(BigInt(result));
+      }
     } catch (e) {
       console.error('Failed to fetch USDC balance:', e);
+      setUsdcBalance(0n);
     }
   };
+  
+  // Refetch balance when chain changes to Polygon
+  useEffect(() => {
+    if (address && chainId === CHAIN_ID && !demoMode) {
+      fetchUSDCBalance(address);
+    }
+  }, [chainId, address, demoMode]);
 
   // ============================================================================
   // CHANNEL FUNCTIONS
