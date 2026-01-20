@@ -17,6 +17,7 @@ contracts/broadcast/
 .env
 .env.local
 .env.*.local
+contracts/.env
 
 # IDE
 .idea/

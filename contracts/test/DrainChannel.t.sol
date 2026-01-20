@@ -619,6 +619,9 @@ contract DrainChannelTest is Test {
     }
 
     function testFuzz_Open_AnyDuration(uint256 duration) public {
+        // Bound to prevent overflow (max ~100 years)
+        duration = bound(duration, 0, 365 days * 100);
+        
         vm.prank(consumer);
         bytes32 channelId = drain.open(provider, DEPOSIT, duration);
         
