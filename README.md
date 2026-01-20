@@ -134,7 +134,10 @@ drain/
 ├── sdk/                        # TypeScript SDK
 │   ├── src/consumer.ts         # Consumer: open, sign, close
 │   └── src/provider.ts         # Provider: verify, claim
-└── provider/                   # Reference implementation (planned)
+└── provider/                   # Reference AI Provider
+    ├── src/index.ts            # Express server (OpenAI-compatible)
+    ├── src/drain.ts            # Voucher validation
+    └── src/config.ts           # Pricing configuration
 ```
 
 ## SDK Quick Start
@@ -174,7 +177,7 @@ See [`sdk/README.md`](./sdk/README.md) for full documentation.
 | Testnet Deployment      | ✅ Live on Amoy |
 | **Mainnet Deployment**  | ✅ **LIVE** |
 | **TypeScript SDK**      | ✅ **Available** |
-| Provider Implementation | 📋 Planned     |
+| **Reference Provider**  | ✅ **Available** |
 | Security Audit          | 📋 Planned     |
 
 ### Deployed Contracts
