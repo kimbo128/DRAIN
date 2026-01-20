@@ -127,17 +127,18 @@ Total overhead: **<$0.05** per session regardless of usage.
 
 ```
 drain/
-├── contracts/
+├── contracts/                  # Solidity smart contracts
 │   ├── src/DrainChannel.sol    # Core payment channel contract
 │   ├── test/                   # 47 Foundry tests
 │   └── script/                 # Deploy scripts
 ├── sdk/                        # TypeScript SDK
 │   ├── src/consumer.ts         # Consumer: open, sign, close
 │   └── src/provider.ts         # Provider: verify, claim
-└── provider/                   # Reference AI Provider
-    ├── src/index.ts            # Express server (OpenAI-compatible)
-    ├── src/drain.ts            # Voucher validation
-    └── src/config.ts           # Pricing configuration
+├── provider/                   # Reference AI Provider
+│   ├── src/index.ts            # Express server (OpenAI-compatible)
+│   └── src/drain.ts            # Voucher validation
+└── demo/                       # Demo Website
+    └── src/app/page.tsx        # Next.js + RainbowKit
 ```
 
 ## SDK Quick Start
@@ -209,6 +210,7 @@ See [`provider/README.md`](./provider/README.md) for full documentation.
 | **Mainnet Deployment**  | ✅ **LIVE** |
 | **TypeScript SDK**      | ✅ **Available** |
 | **Reference Provider**  | ✅ **Available** |
+| **Demo Website**        | ✅ **Available** |
 | Security Audit          | 📋 Planned     |
 
 ### Deployed Contracts
