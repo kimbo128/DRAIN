@@ -75,6 +75,40 @@ export default function Home() {
     setChainId(137);
   };
 
+  const switchToPolygon = async () => {
+    if (!window.ethereum) return;
+    
+    try {
+      // Try to switch to Polygon
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x89' }], // 137 in hex
+      });
+      setChainId(137);
+    } catch (switchError: any) {
+      // Chain not added, add it
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x89',
+              chainName: 'Polygon Mainnet',
+              nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+              rpcUrls: ['https://polygon-rpc.com'],
+              blockExplorerUrls: ['https://polygonscan.com'],
+            }],
+          });
+          setChainId(137);
+        } catch (addError) {
+          console.error('Failed to add Polygon:', addError);
+        }
+      } else {
+        console.error('Failed to switch:', switchError);
+      }
+    }
+  };
+
   const openChannel = async () => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1200));
@@ -199,9 +233,12 @@ export default function Home() {
                   </span>
                 )}
                 {!isPolygon && !demoMode && (
-                  <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">
-                    Switch to Polygon
-                  </span>
+                  <button
+                    onClick={switchToPolygon}
+                    className="px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-xs font-medium transition cursor-pointer"
+                  >
+                    ⚠️ Switch to Polygon
+                  </button>
                 )}
                 <div className="px-4 py-2 bg-[#1a1a1a] rounded-lg border border-[#333] font-mono text-sm text-gray-300">
                   {shortAddress}
@@ -369,9 +406,12 @@ export default function Home() {
               </button>
               
               {!isPolygon && !demoMode && (
-                <p className="text-yellow-400 text-sm mt-3 text-center">
-                  Please switch to Polygon network in MetaMask
-                </p>
+                <button
+                  onClick={switchToPolygon}
+                  className="w-full mt-3 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-sm font-medium transition"
+                >
+                  ⚠️ Click to switch to Polygon network
+                </button>
               )}
               
               {demoMode && (
