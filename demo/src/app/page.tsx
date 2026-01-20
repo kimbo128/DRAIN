@@ -103,8 +103,8 @@ function parseUSDC(amount: string): bigint {
   return BigInt(Math.floor(num * 1_000_000));
 }
 
-const MIN_DEPOSIT = 0.5;  // $0.50 minimum
-const MAX_DEPOSIT = 100;  // $100 maximum
+const MIN_DEPOSIT = 0.10;  // $0.10 minimum - true micropayments!
+const MAX_DEPOSIT = 100;   // $100 maximum
 
 // ============================================================================
 // COMPONENT
@@ -766,7 +766,7 @@ export default function Home() {
                 
                 {/* Quick Select */}
                 <div className="flex gap-2">
-                  {['1', '5', '10', '25', '50'].map(amt => (
+                  {['0.25', '1', '5', '10', '25'].map(amt => (
                     <button
                       key={amt}
                       onClick={() => setDepositAmount(amt)}
