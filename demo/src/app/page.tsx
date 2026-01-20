@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Provider URL - change to your deployed provider
-const PROVIDER_URL = process.env.NEXT_PUBLIC_PROVIDER_URL || 'http://localhost:3001';
+// Provider URL - DRAIN Provider on Railway
+const PROVIDER_URL = 'https://drain-production-a9d4.up.railway.app';
 
 interface Message {
   role: 'user' | 'assistant';
