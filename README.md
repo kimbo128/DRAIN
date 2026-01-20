@@ -140,12 +140,19 @@ drain/
 | Component               | Status         |
 | ----------------------- | -------------- |
 | Smart Contract          | ✅ Complete    |
-| Test Suite (40+ tests)  | ✅ Complete    |
+| Test Suite (47 tests)   | ✅ Complete    |
 | OpenZeppelin ECDSA      | ✅ Integrated  |
-| Testnet Deployment      | 📋 Planned     |
+| Testnet Deployment      | ✅ **Live on Amoy** |
 | Client SDK              | 📋 Planned     |
 | Provider Implementation | 📋 Planned     |
 | Security Audit          | 📋 Planned     |
+
+### Deployed Contracts
+
+| Network | Contract | Address |
+|---------|----------|---------|
+| Polygon Amoy (Testnet) | DrainChannel | [`0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C`](https://amoy.polygonscan.com/address/0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C) |
+| Polygon Mainnet | DrainChannel | 📋 Pending audit |
 
 ## Getting Started
 
