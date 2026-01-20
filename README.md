@@ -35,16 +35,18 @@ DRAIN enables permissionless, pay-per-token AI inference without intermediaries.
 
 ## How It Works
 
+DRAIN is like a **prepaid card for AI**: deposit USDC, use it across requests, withdraw the remainder.
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                        Off-Chain (Fast)                          │
+│                        Off-Chain (Fast & Free)                   │
 │                                                                  │
 │    Consumer                                      Provider        │
 │        │                                             │           │
-│        │───────── Request ──────────────────────────►│           │
-│        │◄──────── Token Stream ──────────────────────│           │
-│        │───────── Signed Voucher ───────────────────►│           │
-│        │◄──────── Token Stream ──────────────────────│           │
+│        │───────── Request + Voucher ────────────────►│           │
+│        │◄──────── AI Response ──────────────────────│           │
+│        │───────── Request + Voucher ────────────────►│           │
+│        │◄──────── AI Response ──────────────────────│           │
 │        │                    ...                      │           │
 │                                                                  │
 └────────┼─────────────────────────────────────────────┼───────────┘
@@ -52,19 +54,52 @@ DRAIN enables permissionless, pay-per-token AI inference without intermediaries.
          │              On-Chain (Rare)                │
          ▼                                             ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                                                                  │
 │                        DRAIN Contract                            │
 │                                                                  │
-│     open(provider, amount, duration)    →  Create channel        │
-│     claim(channelId, amount, signature) →  Settle payment        │
+│     open(provider, amount, duration)    →  Lock USDC             │
+│     claim(channelId, amount, signature) →  Pay provider          │
 │     close(channelId)                    →  Refund remainder      │
-│                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Open** – Consumer deposits USDC into a payment channel
-2. **Stream** – Provider delivers tokens, consumer signs incremental vouchers
-3. **Settle** – Provider claims earnings on-chain, consumer withdraws remainder
+### The Two Roles
+
+| Role | What They Do | On-Chain Actions |
+|------|--------------|------------------|
+| **Consumer** | Pays for AI services | `open` (deposit), `close` (refund) |
+| **Provider** | Delivers AI responses | `claim` (withdraw earnings) |
+
+### Consumer Flow
+
+1. **Open Channel**: Deposit USDC for a specific provider and duration (~$0.02 gas)
+2. **Use Service**: Send requests with signed vouchers (free, off-chain)
+3. **Close Channel**: Withdraw unused USDC after expiry (~$0.02 gas)
+
+### Provider Flow
+
+1. **Receive Request**: Validate voucher signature and amount
+2. **Deliver Service**: Return AI response
+3. **Claim Payment**: Submit highest voucher to get paid (~$0.02 gas)
+
+### Vouchers Are Cumulative
+
+Each voucher contains the **total** amount spent, not the increment:
+
+```
+Request 1: voucher.amount = $0.10  (total spent so far)
+Request 2: voucher.amount = $0.25  (total, not $0.15 increment)
+Request 3: voucher.amount = $0.40  (total, not $0.15 increment)
+```
+
+Provider only needs to claim the **last** voucher to receive full payment.
+
+### Payment Currency
+
+| Asset | Network | Why |
+|-------|---------|-----|
+| **USDC** | Polygon | Stable ($1), liquid ($500M+), low fees ($0.02/tx) |
+
+USDC on Polygon can be bridged from Ethereum, Base, Arbitrum via [Circle CCTP](https://www.circle.com/en/cross-chain-transfer-protocol).
 
 ## Protocol Specification
 
@@ -252,6 +287,44 @@ forge coverage           # Line coverage
 - Proven infrastructure, no reorgs
 
 Future chains via CREATE2 for identical addresses.
+
+## FAQ
+
+<details>
+<summary><strong>What if the provider doesn't deliver?</strong></summary>
+
+Stop signing vouchers. Your USDC stays locked until expiry, then you can close the channel and get a full refund. The provider can only claim what you've signed.
+</details>
+
+<details>
+<summary><strong>What if the consumer stops paying?</strong></summary>
+
+Provider stops delivering service and claims the last valid voucher. The consumer's deposit covers all signed vouchers.
+</details>
+
+<details>
+<summary><strong>Can I use ETH/MATIC instead of USDC?</strong></summary>
+
+No. DRAIN v1 supports only USDC on Polygon. This keeps the protocol simple and prices predictable.
+</details>
+
+<details>
+<summary><strong>Can I close a channel early?</strong></summary>
+
+No. Channels have a fixed duration (e.g., 24h) to protect providers. After expiry, unused funds are refundable.
+</details>
+
+<details>
+<summary><strong>When should providers claim?</strong></summary>
+
+Recommended: when accumulated earnings exceed ~$10 (to amortize $0.02 gas). Or before channel expiry.
+</details>
+
+<details>
+<summary><strong>Can I top up a channel?</strong></summary>
+
+No. Open a new channel instead. This keeps the protocol simple and avoids edge cases.
+</details>
 
 ## Contributing
 
