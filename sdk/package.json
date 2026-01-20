@@ -1,0 +1,49 @@
+{
+  "name": "@drain-protocol/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for DRAIN Protocol - Trustless AI micropayments",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "lint": "eslint src/",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "drain",
+    "ai",
+    "micropayments",
+    "payment-channels",
+    "usdc",
+    "polygon",
+    "ethereum",
+    "web3"
+  ],
+  "author": "DRAIN Protocol",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kimbo128/DRAIN.git"
+  },
+  "dependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
