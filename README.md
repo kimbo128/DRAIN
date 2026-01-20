@@ -249,7 +249,7 @@ See [`provider/README.md`](./provider/README.md) for full documentation.
 | **Mainnet Deployment**  | ✅ **LIVE** |
 | **TypeScript SDK**      | ✅ **Available** |
 | **Reference Provider**  | ✅ **Available** |
-| **Demo Website**        | ✅ **Available** |
+| **Demo Website**        | ✅ **[Live Demo](https://believable-inspiration-production-b1c6.up.railway.app/)** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
 | Security Audit          | 📋 Planned     |
 
