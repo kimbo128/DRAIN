@@ -19,8 +19,7 @@ import {
   DRAIN_ADDRESSES,
   DRAIN_CHANNEL_ABI,
   EIP712_DOMAIN,
-  USDC_DECIMALS,
-} from '@drain-protocol/sdk';
+} from './constants.js';
 import type { ProviderConfig, VoucherHeader, StoredVoucher, ChannelState } from './types.js';
 import { VoucherStorage } from './storage.js';
 
