@@ -6,12 +6,33 @@ import { useState, useEffect, useRef } from 'react';
 // CONSTANTS
 // ============================================================================
 
-const PROVIDER_URL = 'https://drain-production-a9d4.up.railway.app';
-const PROVIDER_ADDRESS = '0xCCf2a94EcC6002b8Dd9d161ef15Bb4ABD5cD9E41';
 const DRAIN_CONTRACT = '0x1C1918C99b6DcE977392E4131C91654d8aB71e64';
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const CHAIN_ID = 137;
-const USDC_DECIMALS = 6;
+
+// Available AI Providers
+const PROVIDERS = [
+  {
+    id: 'drain-official',
+    name: 'DRAIN Official',
+    url: 'https://drain-production-a9d4.up.railway.app',
+    address: '0xCCf2a94EcC6002b8Dd9d161ef15Bb4ABD5cD9E41',
+    models: [
+      { id: 'gpt-4o-mini', name: 'GPT-4o Mini', costPer1k: 0.001125 },
+      { id: 'gpt-4o', name: 'GPT-4o', costPer1k: 0.01875 },
+      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', costPer1k: 0.06 },
+      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', costPer1k: 0.003 },
+    ],
+  },
+  // Add more providers here in the future
+  // {
+  //   id: 'another-provider',
+  //   name: 'Another AI Provider',
+  //   url: 'https://...',
+  //   address: '0x...',
+  //   models: [...],
+  // },
+];
 
 // ABIs
 const ERC20_ABI = [
@@ -99,6 +120,10 @@ export default function Home() {
   // Channel state
   const [channel, setChannel] = useState<Channel | null>(null);
   const [voucherNonce, setVoucherNonce] = useState(0);
+  
+  // Provider/Model state
+  const [selectedProvider, setSelectedProvider] = useState(PROVIDERS[0]);
+  const [selectedModel, setSelectedModel] = useState(PROVIDERS[0].models[0]);
   
   // UI state
   const [depositAmount, setDepositAmount] = useState('5');
@@ -261,7 +286,7 @@ export default function Home() {
       // open(address,uint256,uint256)
       const openData = '0x' +
         'e4350d38' + // function selector for open(address,uint256,uint256)
-        PROVIDER_ADDRESS.slice(2).padStart(64, '0') +
+        selectedProvider.address.slice(2).padStart(64, '0') +
         amount.toString(16).padStart(64, '0') +
         duration.toString(16).padStart(64, '0');
       
@@ -313,7 +338,7 @@ export default function Home() {
       
       setMessages([{
         role: 'system',
-        content: `🎉 Payment channel opened!\n\n• Deposit: $${depositAmount} USDC\n• Provider: ${PROVIDER_ADDRESS.slice(0, 10)}...\n• Channel: ${channelId.slice(0, 18)}...\n• Expires: ${new Date(Date.now() + Number(duration) * 1000).toLocaleString()}\n\nYou can now chat with AI. Each message will be paid via signed vouchers!`
+        content: `🎉 Payment channel opened!\n\n• Deposit: $${depositAmount} USDC\n• Provider: ${selectedProvider.name}\n• Model: ${selectedModel.name}\n• Channel: ${channelId.slice(0, 18)}...\n• Expires: ${new Date(Date.now() + Number(duration) * 1000).toLocaleString()}\n\nYou can now chat with AI. Each message costs ~$${selectedModel.costPer1k.toFixed(4)}/1K tokens.`
       }]);
       
       setVoucherNonce(0);
@@ -452,14 +477,14 @@ export default function Home() {
       setStatus('Sending to AI...');
       
       // Call provider API
-      const response = await fetch(`${PROVIDER_URL}/v1/chat/completions`, {
+      const response = await fetch(`${selectedProvider.url}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-DRAIN-Voucher': voucherHeader,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: selectedModel.id,
           messages: [
             ...messages.filter(m => m.role !== 'system').map(m => ({
               role: m.role,
@@ -710,34 +735,76 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Provider & Model Selection */}
+              <div className="space-y-3 mb-6">
+                {/* Provider Selection */}
+                <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3">
+                  <label className="text-xs text-gray-500 block mb-2">AI PROVIDER</label>
+                  <select
+                    value={selectedProvider.id}
+                    onChange={(e) => {
+                      const provider = PROVIDERS.find(p => p.id === e.target.value)!;
+                      setSelectedProvider(provider);
+                      setSelectedModel(provider.models[0]);
+                    }}
+                    className="w-full bg-[#111] border border-[#333] rounded-lg px-3 py-2 text-white outline-none focus:border-[#00D395]"
+                  >
+                    {PROVIDERS.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Model Selection */}
+                <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3">
+                  <label className="text-xs text-gray-500 block mb-2">AI MODEL</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedProvider.models.map(model => (
+                      <button
+                        key={model.id}
+                        onClick={() => setSelectedModel(model)}
+                        className={`p-3 rounded-lg text-left transition ${
+                          selectedModel.id === model.id
+                            ? 'bg-[#00D395]/20 border-2 border-[#00D395]'
+                            : 'bg-[#111] border border-[#333] hover:border-[#444]'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{model.name}</div>
+                        <div className="text-xs text-gray-500">${model.costPer1k.toFixed(4)}/1K</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               {/* Estimates */}
               <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4 mb-6">
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
                     <div className="text-2xl font-bold text-[#00D395]">
-                      ~{Math.floor((parseFloat(depositAmount) || 0) * 1000).toLocaleString()}
+                      ~{Math.floor((parseFloat(depositAmount) || 0) / selectedModel.costPer1k).toLocaleString()}
                     </div>
-                    <div className="text-xs text-gray-500">messages</div>
+                    <div className="text-xs text-gray-500">est. messages</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-[#7B61FF]">
-                      ~${((parseFloat(depositAmount) || 0) / 1000 * 1000).toFixed(4)}
+                      ${selectedModel.costPer1k.toFixed(4)}
                     </div>
-                    <div className="text-xs text-gray-500">per message</div>
+                    <div className="text-xs text-gray-500">per ~1K tokens</div>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-[#222] text-xs text-gray-500 space-y-1">
                   <div className="flex justify-between">
-                    <span>Model</span>
-                    <span className="text-gray-300">gpt-4o-mini</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Provider</span>
-                    <span className="font-mono">{PROVIDER_ADDRESS.slice(0, 10)}...</span>
+                    <span>Provider Address</span>
+                    <span className="font-mono">{selectedProvider.address.slice(0, 10)}...</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Network</span>
-                    <span className="text-gray-300">Polygon</span>
+                    <span className="text-gray-300">Polygon Mainnet</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Channel Duration</span>
+                    <span className="text-gray-300">24 hours</span>
                   </div>
                 </div>
               </div>
@@ -774,10 +841,12 @@ export default function Home() {
             {/* Status Bar */}
             <div className="bg-[#111] border border-[#222] rounded-xl p-4 mb-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <div className="w-2 h-2 rounded-full bg-[#00D395] animate-pulse"></div>
-                  <span className="text-sm text-gray-400">Active</span>
-                  <span className="text-xs text-gray-600 font-mono">{channel.id.slice(0, 14)}...</span>
+                  <span className="text-sm text-gray-400">{selectedProvider.name}</span>
+                  <span className="px-2 py-0.5 bg-[#7B61FF]/20 text-[#7B61FF] rounded text-xs font-medium">
+                    {selectedModel.name}
+                  </span>
                   <button
                     onClick={demoMode ? () => { setChannel(null); setMessages([]); } : closeChannel}
                     disabled={isLoading}
