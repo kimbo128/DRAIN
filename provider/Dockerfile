@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including dev for build)
+RUN npm ci
 
 # Copy source
 COPY . .
@@ -14,8 +14,11 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Remove dev dependencies after build
+RUN npm prune --production
+
 # Expose port
 EXPOSE 3000
 
 # Start server
-CMD ["npm", "start"]
+CMD ["node", "dist/index.js"]
