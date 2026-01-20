@@ -221,15 +221,23 @@ export default function Home() {
 
   const fetchUSDCBalance = async (addr: string) => {
     try {
-      // Call balanceOf using eth_call
-      // balanceOf(address) selector = 0x70a08231
+      // Use direct RPC call for reliability (MetaMask can be flaky with eth_call)
       const paddedAddr = addr.toLowerCase().slice(2).padStart(64, '0');
       const data = '0x70a08231' + paddedAddr;
       
-      const result = await window.ethereum!.request({
-        method: 'eth_call',
-        params: [{ to: USDC_ADDRESS, data }, 'latest'],
-      }) as string;
+      const response = await fetch('https://polygon-rpc.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_call',
+          params: [{ to: USDC_ADDRESS, data }, 'latest'],
+          id: 1,
+        }),
+      });
+      
+      const json = await response.json();
+      const result = json.result;
       
       // Handle empty result or 0x
       if (!result || result === '0x' || result === '0x0') {
@@ -241,6 +249,15 @@ export default function Home() {
       console.error('Failed to fetch USDC balance:', e);
       setUsdcBalance(0n);
     }
+  };
+  
+  const disconnectWallet = () => {
+    setAddress(null);
+    setChainId(null);
+    setUsdcBalance(0n);
+    setChannel(null);
+    setMessages([]);
+    setDemoMode(false);
   };
   
   // Refetch balance when chain changes to Polygon
@@ -646,8 +663,19 @@ export default function Home() {
                     {formatUSDC(usdcBalance)} USDC
                   </span>
                 )}
-                <div className="px-3 py-1.5 bg-[#1a1a1a] rounded-lg border border-[#333] font-mono text-sm text-gray-300">
-                  {shortAddress}
+                <div className="flex items-center gap-2">
+                  <div className="px-3 py-1.5 bg-[#1a1a1a] rounded-lg border border-[#333] font-mono text-sm text-gray-300">
+                    {shortAddress}
+                  </div>
+                  <button
+                    onClick={disconnectWallet}
+                    className="p-1.5 hover:bg-[#333] rounded-lg transition text-gray-500 hover:text-white"
+                    title="Disconnect"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                  </button>
                 </div>
               </>
             ) : (
