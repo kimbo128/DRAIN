@@ -209,6 +209,17 @@ OpenAI-compatible API server that accepts DRAIN payments.
 
 **🟢 Live Provider:** https://drain-production-a9d4.up.railway.app
 
+### Available Models & Pricing
+
+| Model | Input/1K Tokens | Output/1K Tokens | ~Cost/Message |
+|-------|-----------------|------------------|---------------|
+| **gpt-4o-mini** | $0.000225 | $0.0009 | ~$0.001 ✨ |
+| gpt-4o | $0.00375 | $0.015 | ~$0.01 |
+| gpt-4-turbo | $0.015 | $0.045 | ~$0.03 |
+| gpt-3.5-turbo | $0.00075 | $0.00225 | ~$0.002 |
+
+*Prices include 50% margin over OpenAI base rates*
+
 **Run your own:**
 
 ```bash
@@ -228,7 +239,7 @@ POST /v1/chat/completions → Chat (with X-DRAIN-Voucher header)
 **DRAIN Headers:**
 ```http
 # Request
-X-DRAIN-Voucher: {"channelId":"0x...","amount":"1000000","nonce":"1","signature":"0x..."}
+X-DRAIN-Voucher: channelId:amount:nonce:signature
 
 # Response
 X-DRAIN-Cost: 8250
@@ -237,6 +248,26 @@ X-DRAIN-Remaining: 9841750
 ```
 
 See [`provider/README.md`](./provider/README.md) for full documentation.
+
+## Demo Application
+
+**🟢 Live Demo:** https://believable-inspiration-production-b1c6.up.railway.app
+
+Try DRAIN without writing code:
+
+1. **Connect Wallet** – MetaMask on Polygon Mainnet
+2. **Choose Provider & Model** – Select from available AI models
+3. **Open Channel** – Deposit USDC ($0.50 - $100)
+4. **Chat** – Each message signs a voucher and calls the real AI
+5. **Close Channel** – Get unused USDC refunded
+
+Features:
+- Real blockchain transactions (USDC approval, channel open/close)
+- EIP-712 voucher signing with MetaMask
+- Live API calls to the DRAIN provider
+- Real-time cost tracking per message
+
+**Demo Mode** available for testing without real funds.
 
 ## Development Status
 
