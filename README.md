@@ -205,7 +205,11 @@ See [`sdk/README.md`](./sdk/README.md) for full documentation.
 
 ## Reference Provider
 
-OpenAI-compatible API server that accepts DRAIN payments:
+OpenAI-compatible API server that accepts DRAIN payments.
+
+**🟢 Live Provider:** https://drain-production-a9d4.up.railway.app
+
+**Run your own:**
 
 ```bash
 cd provider
@@ -246,6 +250,7 @@ See [`provider/README.md`](./provider/README.md) for full documentation.
 | **TypeScript SDK**      | ✅ **Available** |
 | **Reference Provider**  | ✅ **Available** |
 | **Demo Website**        | ✅ **Available** |
+| **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
 | Security Audit          | 📋 Planned     |
 
 ### Deployed Contracts
