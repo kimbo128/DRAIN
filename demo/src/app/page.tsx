@@ -332,9 +332,9 @@ export default function Home() {
       // 3. Open channel
       setStatus('Opening payment channel...');
       
-      // open(address,uint256,uint256) - selector: 0xe4350d38
-      // keccak256("open(address,uint256,uint256)") = 0xe4350d38...
-      const openData = '0xe4350d38' +
+      // open(address,uint256,uint256) - selector: 0x89a86ad3
+      // keccak256("open(address,uint256,uint256)") = 0x89a86ad3...
+      const openData = '0x89a86ad3' +
         selectedProvider.address.slice(2).toLowerCase().padStart(64, '0') +
         amount.toString(16).padStart(64, '0') +
         duration.toString(16).padStart(64, '0');
