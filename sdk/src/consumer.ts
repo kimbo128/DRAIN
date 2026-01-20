@@ -6,13 +6,11 @@
 
 import {
   createPublicClient,
-  createWalletClient,
   http,
   parseUnits,
   formatUnits,
   type Address,
   type Hash,
-  type Hex,
   type PublicClient,
   type WalletClient,
   type Account,

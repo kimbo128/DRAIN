@@ -6,13 +6,11 @@
 
 import {
   createPublicClient,
-  createWalletClient,
   http,
   formatUnits,
   verifyTypedData,
   type Address,
   type Hash,
-  type Hex,
   type PublicClient,
   type WalletClient,
   type Account,
@@ -20,7 +18,6 @@ import {
 import { polygon, polygonAmoy } from 'viem/chains';
 import {
   DRAIN_ADDRESSES,
-  USDC_ADDRESSES,
   USDC_DECIMALS,
   DRAIN_CHANNEL_ABI,
   EIP712_DOMAIN,
@@ -28,7 +25,6 @@ import {
 import type {
   Channel,
   Voucher,
-  ClaimOptions,
   DrainConfig,
   SupportedChainId,
 } from './types';
@@ -69,7 +65,6 @@ export class DrainProvider {
   private account: Account | null;
   private chainId: SupportedChainId;
   private contractAddress: Address;
-  private usdcAddress: Address;
   
   // Track highest seen nonce per channel to prevent replay
   private highestNonces: Map<Hash, bigint> = new Map();
@@ -87,7 +82,6 @@ export class DrainProvider {
     });
     
     this.contractAddress = config.contractAddress ?? DRAIN_ADDRESSES[config.chainId];
-    this.usdcAddress = config.usdcAddress ?? USDC_ADDRESSES[config.chainId];
   }
 
   /**

@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --drain-green: #00D395;
+  --drain-purple: #7B61FF;
+  --drain-dark: #0A0A0A;
+  --drain-gray: #1A1A1A;
+}
+
+body {
+  background: linear-gradient(135deg, #0A0A0A 0%, #0F1419 50%, #0A0A0A 100%);
+  min-height: 100vh;
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 20px rgba(0, 211, 149, 0.3), 0 0 40px rgba(0, 211, 149, 0.1);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(123, 97, 255, 0.3), 0 0 40px rgba(123, 97, 255, 0.1);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #00D395 0%, #7B61FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animated border */
+.animated-border {
+  position: relative;
+  background: linear-gradient(#0A0A0A, #0A0A0A) padding-box,
+              linear-gradient(135deg, #00D395, #7B61FF, #00D395) border-box;
+  border: 2px solid transparent;
+  border-radius: 16px;
+}
+
+/* Terminal style */
+.terminal {
+  background: #0D0D0D;
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  font-family: var(--font-mono), monospace;
+}
+
+/* Chat messages */
+.chat-user {
+  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+  border-left: 3px solid #00D395;
+}
+
+.chat-assistant {
+  background: linear-gradient(135deg, #1A1A1A 0%, #0F0F0F 100%);
+  border-left: 3px solid #7B61FF;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Pulse animation for status */
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 211, 149, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 211, 149, 0); }
+}
+
+.pulse-green {
+  animation: pulse-green 2s infinite;
+}
+
+/* Loading dots */
+@keyframes loading-dots {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
+}
+
+.loading-dot:nth-child(1) { animation: loading-dots 1.4s infinite 0s; }
+.loading-dot:nth-child(2) { animation: loading-dots 1.4s infinite 0.2s; }
+.loading-dot:nth-child(3) { animation: loading-dots 1.4s infinite 0.4s; }
