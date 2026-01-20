@@ -239,7 +239,7 @@ POST /v1/chat/completions → Chat (with X-DRAIN-Voucher header)
 **DRAIN Headers:**
 ```http
 # Request
-X-DRAIN-Voucher: channelId:amount:nonce:signature
+X-DRAIN-Voucher: {"channelId":"0x...","amount":"1000000","nonce":"1","signature":"0x..."}
 
 # Response
 X-DRAIN-Cost: 8250
