@@ -129,11 +129,40 @@ Total overhead: **<$0.05** per session regardless of usage.
 drain/
 ├── contracts/
 │   ├── src/DrainChannel.sol    # Core payment channel contract
-│   ├── test/                   # 40+ Foundry tests
+│   ├── test/                   # 47 Foundry tests
 │   └── script/                 # Deploy scripts
-├── sdk/                        # TypeScript SDK (planned)
+├── sdk/                        # TypeScript SDK
+│   ├── src/consumer.ts         # Consumer: open, sign, close
+│   └── src/provider.ts         # Provider: verify, claim
 └── provider/                   # Reference implementation (planned)
 ```
+
+## SDK Quick Start
+
+```bash
+npm install @drain-protocol/sdk viem
+```
+
+```typescript
+import { createDrainConsumer, CHAIN_IDS } from '@drain-protocol/sdk';
+
+// Open channel, sign vouchers, close when done
+const consumer = createDrainConsumer(walletClient, account, {
+  chainId: CHAIN_IDS.POLYGON_MAINNET,
+});
+
+await consumer.approveUsdc('10');
+const { channelId } = await consumer.openChannel({
+  provider: '0x...',
+  amount: '10',
+  duration: '24h',
+});
+
+const voucher = await consumer.signVoucher(channelId, '0.50');
+// Send voucher to provider...
+```
+
+See [`sdk/README.md`](./sdk/README.md) for full documentation.
 
 ## Development Status
 
@@ -144,7 +173,7 @@ drain/
 | OpenZeppelin ECDSA      | ✅ Integrated  |
 | Testnet Deployment      | ✅ Live on Amoy |
 | **Mainnet Deployment**  | ✅ **LIVE** |
-| Client SDK              | 📋 Planned     |
+| **TypeScript SDK**      | ✅ **Available** |
 | Provider Implementation | 📋 Planned     |
 | Security Audit          | 📋 Planned     |
 
