@@ -1,8 +1,54 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
 
 const PROVIDER_URL = 'https://drain-production-a9d4.up.railway.app';
+const PROVIDER_ADDRESS = '0xCCf2a94EcC6002b8Dd9d161ef15Bb4ABD5cD9E41';
+const DRAIN_CONTRACT = '0x1C1918C99b6DcE977392E4131C91654d8aB71e64';
+const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+const CHAIN_ID = 137;
+const USDC_DECIMALS = 6;
+
+// ABIs
+const ERC20_ABI = [
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function balanceOf(address account) view returns (uint256)',
+];
+
+const DRAIN_ABI = [
+  'function open(address provider, uint256 amount, uint256 duration) returns (bytes32)',
+  'function close(bytes32 channelId)',
+  'function getChannel(bytes32 channelId) view returns (tuple(address consumer, address provider, uint256 deposit, uint256 claimed, uint256 expiry))',
+  'function getBalance(bytes32 channelId) view returns (uint256)',
+  'function DOMAIN_SEPARATOR() view returns (bytes32)',
+  'event ChannelOpened(bytes32 indexed channelId, address indexed consumer, address indexed provider, uint256 deposit, uint256 expiry)',
+];
+
+// EIP-712 Types for voucher signing
+const VOUCHER_TYPES = {
+  Voucher: [
+    { name: 'channelId', type: 'bytes32' },
+    { name: 'amount', type: 'uint256' },
+    { name: 'nonce', type: 'uint256' },
+  ],
+};
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface Channel {
+  id: string;
+  deposit: bigint;
+  claimed: bigint;
+  expiry: number;
+  spent: bigint; // Local tracking
+}
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -10,49 +56,85 @@ interface Message {
   cost?: string;
 }
 
-interface ChannelState {
-  id: string;
-  deposit: string;
-  spent: string;
-  remaining: string;
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on?: (event: string, callback: (...args: unknown[]) => void) => void;
+    };
+  }
 }
 
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatUSDC(wei: bigint): string {
+  const num = Number(wei) / 1_000_000;
+  if (num < 0.0001) return num.toFixed(6);
+  if (num < 0.01) return num.toFixed(4);
+  return num.toFixed(2);
+}
+
+function parseUSDC(amount: string): bigint {
+  return BigInt(Math.floor(parseFloat(amount) * 1_000_000));
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export default function Home() {
+  // Wallet state
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [channel, setChannel] = useState<ChannelState | null>(null);
-  const [depositAmount, setDepositAmount] = useState('10');
+  
+  // Channel state
+  const [channel, setChannel] = useState<Channel | null>(null);
+  const [voucherNonce, setVoucherNonce] = useState(0);
+  
+  // UI state
+  const [depositAmount, setDepositAmount] = useState('5');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [voucherCount, setVoucherCount] = useState(0);
+  const [status, setStatus] = useState('');
   const [demoMode, setDemoMode] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isPolygon = chainId === CHAIN_ID;
 
+  // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Check if wallet already connected
+  // Check wallet on load
   useEffect(() => {
     if (typeof window.ethereum !== 'undefined') {
-      window.ethereum.request({ method: 'eth_accounts' }).then((accounts: unknown) => {
+      window.ethereum.request({ method: 'eth_accounts' }).then(async (accounts: unknown) => {
         const accs = accounts as string[];
         if (accs.length > 0) {
           setAddress(accs[0]);
-          window.ethereum!.request({ method: 'eth_chainId' }).then((chain: unknown) => {
-            setChainId(parseInt(chain as string, 16));
-          });
+          const chain = await window.ethereum!.request({ method: 'eth_chainId' }) as string;
+          setChainId(parseInt(chain, 16));
+          if (parseInt(chain, 16) === CHAIN_ID) {
+            fetchUSDCBalance(accs[0]);
+          }
         }
       });
     }
   }, []);
 
+  // ============================================================================
+  // WALLET FUNCTIONS
+  // ============================================================================
+
   const connectWallet = async () => {
     if (typeof window.ethereum === 'undefined') {
-      alert('Please install MetaMask to use DRAIN with real payments.\n\nOr try Demo Mode to explore the interface!');
+      alert('Please install MetaMask to use DRAIN with real payments.\n\nOr try Demo Mode!');
       return;
     }
     
@@ -62,6 +144,10 @@ export default function Home() {
       const chain = await window.ethereum.request({ method: 'eth_chainId' }) as string;
       setAddress(accounts[0]);
       setChainId(parseInt(chain, 16));
+      
+      if (parseInt(chain, 16) === CHAIN_ID) {
+        await fetchUSDCBalance(accounts[0]);
+      }
     } catch (e) {
       console.error('Failed to connect:', e);
     } finally {
@@ -69,89 +155,264 @@ export default function Home() {
     }
   };
 
-  const startDemoMode = () => {
-    setDemoMode(true);
-    setAddress('0xDemo...Mode');
-    setChainId(137);
-  };
-
   const switchToPolygon = async () => {
     if (!window.ethereum) return;
     
     try {
-      // Try to switch to Polygon
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x89' }], // 137 in hex
+        params: [{ chainId: '0x89' }],
       });
-      setChainId(137);
-    } catch (switchError: any) {
-      // Chain not added, add it
-      if (switchError.code === 4902) {
+      setChainId(CHAIN_ID);
+      if (address) await fetchUSDCBalance(address);
+    } catch (switchError: unknown) {
+      const err = switchError as { code?: number };
+      if (err.code === 4902) {
         try {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: '0x89',
               chainName: 'Polygon Mainnet',
-              nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
+              nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
               rpcUrls: ['https://polygon-rpc.com'],
               blockExplorerUrls: ['https://polygonscan.com'],
             }],
           });
-          setChainId(137);
+          setChainId(CHAIN_ID);
         } catch (addError) {
           console.error('Failed to add Polygon:', addError);
         }
-      } else {
-        console.error('Failed to switch:', switchError);
       }
     }
   };
 
+  const fetchUSDCBalance = async (addr: string) => {
+    try {
+      // Call balanceOf using eth_call
+      const data = '0x70a08231' + addr.slice(2).padStart(64, '0');
+      const result = await window.ethereum!.request({
+        method: 'eth_call',
+        params: [{ to: USDC_ADDRESS, data }, 'latest'],
+      }) as string;
+      setUsdcBalance(BigInt(result));
+    } catch (e) {
+      console.error('Failed to fetch USDC balance:', e);
+    }
+  };
+
+  // ============================================================================
+  // CHANNEL FUNCTIONS
+  // ============================================================================
+
   const openChannel = async () => {
+    if (!address || !window.ethereum) return;
+    
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    setStatus('Checking USDC allowance...');
     
-    const mockChannelId = '0x' + Array.from({length: 64}, () => 
-      Math.floor(Math.random() * 16).toString(16)).join('');
-    
-    setChannel({
-      id: mockChannelId,
-      deposit: depositAmount,
-      spent: '0.0000',
-      remaining: depositAmount,
-    });
-    
-    setMessages([{
-      role: 'system',
-      content: `🎉 Payment channel opened with $${depositAmount} USDC!\n\nYour funds are now locked in the smart contract. Each message you send will create a signed voucher authorizing incremental payments.\n\n💡 Try asking: "How does DRAIN work?" or "What makes this different from credit cards?"`
-    }]);
-    
-    setIsLoading(false);
+    try {
+      const amount = parseUSDC(depositAmount);
+      const duration = 86400n; // 24 hours
+      
+      // 1. Check allowance
+      const allowanceData = '0xdd62ed3e' + 
+        address.slice(2).padStart(64, '0') + 
+        DRAIN_CONTRACT.slice(2).padStart(64, '0');
+      
+      const allowanceResult = await window.ethereum.request({
+        method: 'eth_call',
+        params: [{ to: USDC_ADDRESS, data: allowanceData }, 'latest'],
+      }) as string;
+      
+      const allowance = BigInt(allowanceResult);
+      
+      // 2. Approve if needed
+      if (allowance < amount) {
+        setStatus('Approving USDC spend...');
+        
+        // approve(address,uint256)
+        const approveData = '0x095ea7b3' +
+          DRAIN_CONTRACT.slice(2).padStart(64, '0') +
+          amount.toString(16).padStart(64, '0');
+        
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: address,
+            to: USDC_ADDRESS,
+            data: approveData,
+          }],
+        });
+        
+        // Wait for approval
+        setStatus('Waiting for approval confirmation...');
+        await new Promise(r => setTimeout(r, 3000));
+      }
+      
+      // 3. Open channel
+      setStatus('Opening payment channel...');
+      
+      // open(address,uint256,uint256)
+      const openData = '0x' +
+        'e4350d38' + // function selector for open(address,uint256,uint256)
+        PROVIDER_ADDRESS.slice(2).padStart(64, '0') +
+        amount.toString(16).padStart(64, '0') +
+        duration.toString(16).padStart(64, '0');
+      
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: address,
+          to: DRAIN_CONTRACT,
+          data: openData,
+        }],
+      }) as string;
+      
+      setStatus('Waiting for confirmation...');
+      
+      // Poll for transaction receipt
+      let receipt = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        receipt = await window.ethereum.request({
+          method: 'eth_getTransactionReceipt',
+          params: [txHash],
+        });
+        if (receipt) break;
+      }
+      
+      if (!receipt) {
+        throw new Error('Transaction not confirmed');
+      }
+      
+      // Extract channelId from ChannelOpened event
+      const logs = (receipt as { logs: Array<{ topics: string[]; data: string }> }).logs;
+      const openedEvent = logs.find(log => 
+        log.topics[0] === '0x506f81b7a67b45bfbc6167fd087b3dd9b65b4531a2380ec406aab5b57ac62152'
+      );
+      
+      if (!openedEvent) {
+        throw new Error('ChannelOpened event not found');
+      }
+      
+      const channelId = openedEvent.topics[1];
+      
+      setChannel({
+        id: channelId,
+        deposit: amount,
+        claimed: 0n,
+        expiry: Math.floor(Date.now() / 1000) + Number(duration),
+        spent: 0n,
+      });
+      
+      setMessages([{
+        role: 'system',
+        content: `🎉 Payment channel opened!\n\n• Deposit: $${depositAmount} USDC\n• Provider: ${PROVIDER_ADDRESS.slice(0, 10)}...\n• Channel: ${channelId.slice(0, 18)}...\n• Expires: ${new Date(Date.now() + Number(duration) * 1000).toLocaleString()}\n\nYou can now chat with AI. Each message will be paid via signed vouchers!`
+      }]);
+      
+      setVoucherNonce(0);
+      setStatus('');
+      await fetchUSDCBalance(address);
+      
+    } catch (e) {
+      console.error('Failed to open channel:', e);
+      setStatus('');
+      alert('Failed to open channel: ' + (e as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const closeChannel = async () => {
-    if (!channel) return;
+    if (!channel || !address || !window.ethereum) return;
     
     setIsLoading(true);
+    setStatus('Closing channel and refunding...');
     
-    // Simulate closing transaction
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const refundAmount = channel.remaining;
-    const spentAmount = channel.spent;
-    
-    setMessages(prev => [...prev, {
-      role: 'system',
-      content: `💰 Channel Closed!\n\n• Total spent: $${spentAmount} USDC (paid to provider)\n• Refunded: $${refundAmount} USDC (returned to you)\n• Messages sent: ${voucherCount}\n\nYour unused funds have been returned to your wallet. Open a new channel to continue chatting!`
-    }]);
-    
-    // Reset channel state
-    setChannel(null);
-    setVoucherCount(0);
-    setIsLoading(false);
+    try {
+      // close(bytes32)
+      const closeData = '0x39c79e0c' + channel.id.slice(2);
+      
+      await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: address,
+          to: DRAIN_CONTRACT,
+          data: closeData,
+        }],
+      });
+      
+      setStatus('Waiting for confirmation...');
+      await new Promise(r => setTimeout(r, 5000));
+      
+      const refund = channel.deposit - channel.spent;
+      
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: `💰 Channel Closed!\n\n• Spent: $${formatUSDC(channel.spent)} USDC\n• Refunded: $${formatUSDC(refund)} USDC\n\nNote: Refund is sent after channel expiry (${new Date(channel.expiry * 1000).toLocaleString()})`
+      }]);
+      
+      setChannel(null);
+      setVoucherNonce(0);
+      setStatus('');
+      await fetchUSDCBalance(address);
+      
+    } catch (e) {
+      console.error('Failed to close channel:', e);
+      setStatus('');
+      alert('Failed to close channel: ' + (e as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // ============================================================================
+  // VOUCHER SIGNING
+  // ============================================================================
+
+  const signVoucher = async (amount: bigint, nonce: number): Promise<string> => {
+    if (!address || !window.ethereum || !channel) {
+      throw new Error('Not connected');
+    }
+
+    const domain = {
+      name: 'DrainChannel',
+      version: '1',
+      chainId: CHAIN_ID,
+      verifyingContract: DRAIN_CONTRACT,
+    };
+
+    const message = {
+      channelId: channel.id,
+      amount: '0x' + amount.toString(16),
+      nonce: nonce,
+    };
+
+    const signature = await window.ethereum.request({
+      method: 'eth_signTypedData_v4',
+      params: [address, JSON.stringify({
+        types: {
+          EIP712Domain: [
+            { name: 'name', type: 'string' },
+            { name: 'version', type: 'string' },
+            { name: 'chainId', type: 'uint256' },
+            { name: 'verifyingContract', type: 'address' },
+          ],
+          ...VOUCHER_TYPES,
+        },
+        primaryType: 'Voucher',
+        domain,
+        message,
+      })],
+    }) as string;
+
+    return signature;
+  };
+
+  // ============================================================================
+  // CHAT FUNCTION
+  // ============================================================================
 
   const sendMessage = async () => {
     if (!input.trim() || !channel) return;
@@ -162,88 +423,157 @@ export default function Home() {
     setIsLoading(true);
     
     try {
-      // Calculate mock cost based on message length
-      const baseCost = 0.0008;
-      const lengthCost = userMessage.length * 0.00002;
-      const responseCost = 0.002 + Math.random() * 0.003;
-      const totalCost = (baseCost + lengthCost + responseCost).toFixed(4);
+      // Estimate cost (pessimistic: $0.01 per message max)
+      const estimatedCost = 10000n; // $0.01 in USDC wei
+      const newTotal = channel.spent + estimatedCost;
       
-      const newSpent = (parseFloat(channel.spent) + parseFloat(totalCost)).toFixed(4);
-      const newRemaining = (parseFloat(channel.deposit) - parseFloat(newSpent)).toFixed(4);
-      
-      // Simulate AI thinking
-      await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 1000));
-      
-      // Smart responses based on keywords
-      let response: string;
-      const lowerMsg = userMessage.toLowerCase();
-      
-      if (lowerMsg.includes('how') && lowerMsg.includes('work')) {
-        response = "DRAIN works like a prepaid phone card for AI:\n\n1️⃣ **Deposit** - Lock USDC in a smart contract (~$0.02 gas)\n2️⃣ **Use** - Sign vouchers for each AI request (free, off-chain)\n3️⃣ **Settle** - Provider claims payment, you get refund\n\nThe magic: unlimited requests, only 3 blockchain transactions total!";
-      } else if (lowerMsg.includes('credit card') || lowerMsg.includes('different')) {
-        response = "Credit cards can't do micropayments profitably:\n\n💳 Card: $0.30 minimum + 2.9% fee\n🔷 DRAIN: $0.0001 minimum, ~$0.02 per session\n\nThat's why AI APIs charge monthly minimums. DRAIN enables true pay-per-use - even for a single question!";
-      } else if (lowerMsg.includes('cost') || lowerMsg.includes('price') || lowerMsg.includes('expensive')) {
-        response = `This response cost you **$${totalCost} USDC**.\n\nBreakdown:\n- Input tokens: ~$${(baseCost + lengthCost).toFixed(4)}\n- Output tokens: ~$${responseCost.toFixed(4)}\n\nYou've used ${voucherCount + 1} vouchers so far. Your remaining balance: **$${newRemaining}**`;
-      } else if (lowerMsg.includes('voucher') || lowerMsg.includes('signature')) {
-        response = "Each message creates an EIP-712 signed voucher:\n\n```\n{\n  channelId: \"" + channel.id.slice(0, 10) + "...\",\n  amount: \"" + newSpent + "\",  // cumulative\n  nonce: " + (voucherCount + 1) + ",\n  signature: \"0x...\"\n}\n```\n\nThe provider only needs your **last** voucher to claim all payments. Elegant, right?";
-      } else if (lowerMsg.includes('polygon') || lowerMsg.includes('chain') || lowerMsg.includes('usdc')) {
-        response = "DRAIN runs on **Polygon** with native **USDC**:\n\n✅ $0.02 transaction costs\n✅ 5-second finality\n✅ $500M+ USDC liquidity\n✅ Circle CCTP for bridging\n\nNo volatile tokens. No staking. Just stable, predictable payments.";
-      } else if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey')) {
-        response = "Hello! 👋 I'm an AI running on DRAIN - the trustless payment protocol.\n\nEvery response I give costs a tiny amount of USDC, paid directly to the provider. No middlemen, no monthly fees.\n\nAsk me anything about DRAIN, or just chat!";
-      } else {
-        const genericResponses = [
-          "Interesting question! DRAIN makes AI accessible to anyone with USDC - no credit card, no bank account, no KYC required. That's 78% of the world who couldn't easily access AI APIs before.",
-          "I'm processing this through a DRAIN payment channel. The provider will batch-claim these vouchers later, settling everything in one transaction. Efficient!",
-          "Fun fact: AI agents can use DRAIN too! Unlike credit cards, payment channels work great for machine-to-machine payments. The future of autonomous AI commerce.",
-          "This conversation is trustless - I can't overcharge you (you only sign what you agree to), and you can't underpay me (funds are locked in the contract). Cryptography > trust!",
-        ];
-        response = genericResponses[Math.floor(Math.random() * genericResponses.length)];
+      if (newTotal > channel.deposit) {
+        setMessages(prev => [...prev, {
+          role: 'system',
+          content: '⚠️ Insufficient funds in channel. Please close and open a new channel with more USDC.'
+        }]);
+        setIsLoading(false);
+        return;
       }
       
-      setChannel({
-        ...channel,
-        spent: newSpent,
-        remaining: newRemaining,
+      // Sign voucher for new total
+      const nextNonce = voucherNonce + 1;
+      setStatus('Signing voucher...');
+      const signature = await signVoucher(newTotal, nextNonce);
+      
+      // Create voucher header
+      const voucherHeader = `${channel.id}:${newTotal.toString()}:${nextNonce}:${signature}`;
+      
+      setStatus('Sending to AI...');
+      
+      // Call provider API
+      const response = await fetch(`${PROVIDER_URL}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-DRAIN-Voucher': voucherHeader,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            ...messages.filter(m => m.role !== 'system').map(m => ({
+              role: m.role,
+              content: m.content,
+            })),
+            { role: 'user', content: userMessage },
+          ],
+        }),
       });
       
-      setVoucherCount(prev => prev + 1);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'API request failed');
+      }
       
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: response,
-        cost: totalCost
+      const completion = await response.json();
+      const assistantMessage = completion.choices[0]?.message?.content || 'No response';
+      
+      // Get cost from headers
+      const cost = response.headers.get('X-DRAIN-Cost');
+      const totalSpent = response.headers.get('X-DRAIN-Total');
+      const remaining = response.headers.get('X-DRAIN-Remaining');
+      
+      // Update channel state
+      const actualCost = cost ? BigInt(cost) : estimatedCost;
+      const actualTotal = totalSpent ? BigInt(totalSpent) : newTotal;
+      
+      setChannel(prev => prev ? {
+        ...prev,
+        spent: actualTotal,
+      } : null);
+      
+      setVoucherNonce(nextNonce);
+      
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: assistantMessage,
+        cost: `$${formatUSDC(actualCost)}`,
       }]);
       
+      setStatus('');
+      
     } catch (e) {
-      console.error('Error:', e);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: '❌ Something went wrong. Please try again.' 
+      console.error('Failed to send message:', e);
+      setStatus('');
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: `❌ Error: ${(e as Error).message}`
       }]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const shortAddress = address 
-    ? address.startsWith('0xDemo') ? '🎮 Demo Mode' : `${address.slice(0, 6)}...${address.slice(-4)}`
-    : null;
+  // ============================================================================
+  // DEMO MODE
+  // ============================================================================
 
-  const isPolygon = chainId === 137 || chainId === 80002;
+  const startDemoMode = () => {
+    setDemoMode(true);
+    setAddress('0xDemo...Mode');
+    setChainId(CHAIN_ID);
+    setUsdcBalance(parseUSDC('100'));
+    setChannel({
+      id: '0x' + 'demo'.repeat(16),
+      deposit: parseUSDC('10'),
+      claimed: 0n,
+      expiry: Math.floor(Date.now() / 1000) + 86400,
+      spent: 0n,
+    });
+    setMessages([{
+      role: 'system',
+      content: '🎮 Demo Mode Active\n\nThis is a simulation - no real transactions. Connect a real wallet to use DRAIN with actual payments!'
+    }]);
+  };
+
+  const sendDemoMessage = async () => {
+    if (!input.trim() || !channel) return;
+    
+    const userMessage = input.trim();
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
+    
+    await new Promise(r => setTimeout(r, 1000));
+    
+    const mockCost = 500n + BigInt(Math.floor(Math.random() * 1000));
+    
+    setChannel(prev => prev ? {
+      ...prev,
+      spent: prev.spent + mockCost,
+    } : null);
+    
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: `This is a demo response. In real mode, this would be powered by GPT-4 via the DRAIN provider.\n\nYour message was: "${userMessage}"`,
+      cost: `$${formatUSDC(mockCost)}`,
+    }]);
+    
+    setIsLoading(false);
+  };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
+  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
+  const remaining = channel ? channel.deposit - channel.spent : 0n;
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f0f1a] to-[#0a0a0a]">
-      {/* Hero / Header */}
-      <header className="border-b border-[#222] bg-[#0a0a0a]/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D395] to-[#7B61FF] flex items-center justify-center text-xl font-bold">
-              D
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">DRAIN</h1>
-              <p className="text-xs text-gray-500">Pay-per-Token AI</p>
-            </div>
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Header */}
+      <header className="border-b border-[#222] sticky top-0 bg-[#0a0a0a]/95 backdrop-blur z-50">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold bg-gradient-to-r from-[#00D395] to-[#7B61FF] bg-clip-text text-transparent">
+              DRAIN
+            </span>
+            <span className="text-xs text-gray-500 hidden sm:inline">Pay-per-Token AI</span>
           </div>
           
           <div className="flex items-center gap-3">
@@ -251,18 +581,23 @@ export default function Home() {
               <>
                 {demoMode && (
                   <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
-                    Demo Mode
+                    Demo
                   </span>
                 )}
                 {!isPolygon && !demoMode && (
                   <button
                     onClick={switchToPolygon}
-                    className="px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-xs font-medium transition cursor-pointer"
+                    className="px-3 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-xs font-medium transition"
                   >
                     ⚠️ Switch to Polygon
                   </button>
                 )}
-                <div className="px-4 py-2 bg-[#1a1a1a] rounded-lg border border-[#333] font-mono text-sm text-gray-300">
+                {isPolygon && !demoMode && (
+                  <span className="text-xs text-gray-400">
+                    {formatUSDC(usdcBalance)} USDC
+                  </span>
+                )}
+                <div className="px-3 py-1.5 bg-[#1a1a1a] rounded-lg border border-[#333] font-mono text-sm text-gray-300">
                   {shortAddress}
                 </div>
               </>
@@ -272,7 +607,7 @@ export default function Home() {
                   onClick={startDemoMode}
                   className="px-4 py-2 bg-[#222] hover:bg-[#333] text-gray-300 font-medium rounded-lg transition text-sm"
                 >
-                  Try Demo
+                  Demo
                 </button>
                 <button
                   onClick={connectWallet}
@@ -287,124 +622,45 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {!address ? (
-          // Landing / Not Connected
-          <div className="space-y-12">
-            {/* Hero */}
-            <div className="text-center py-16">
-              <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                <span className="bg-gradient-to-r from-[#00D395] via-[#00D395] to-[#7B61FF] bg-clip-text text-transparent">
-                  AI Without Credit Cards
-                </span>
-              </h2>
-              <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-                Pay for AI with USDC micropayments. No tokens, no subscriptions, no middlemen.
-              </p>
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={connectWallet}
-                  className="px-8 py-4 bg-[#00D395] hover:bg-[#00B080] text-black font-bold rounded-xl transition text-lg shadow-lg shadow-[#00D395]/20"
-                >
-                  Connect Wallet
-                </button>
-                <button
-                  onClick={startDemoMode}
-                  className="px-8 py-4 bg-[#1a1a1a] hover:bg-[#222] text-white font-semibold rounded-xl transition text-lg border border-[#333]"
-                >
-                  Try Demo →
-                </button>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-[#111] border border-[#222] rounded-2xl p-6 hover:border-[#00D395]/50 transition">
-                <div className="text-3xl mb-4">💸</div>
-                <h3 className="text-lg font-bold mb-2">True Micropayments</h3>
-                <p className="text-gray-400 text-sm">Pay $0.001 per request. Credit cards can't do that - DRAIN can.</p>
-              </div>
-              <div className="bg-[#111] border border-[#222] rounded-2xl p-6 hover:border-[#7B61FF]/50 transition">
-                <div className="text-3xl mb-4">🔐</div>
-                <h3 className="text-lg font-bold mb-2">Trustless</h3>
-                <p className="text-gray-400 text-sm">Smart contracts, not promises. You control your funds.</p>
-              </div>
-              <div className="bg-[#111] border border-[#222] rounded-2xl p-6 hover:border-[#00D395]/50 transition">
-                <div className="text-3xl mb-4">🌍</div>
-                <h3 className="text-lg font-bold mb-2">Global Access</h3>
-                <p className="text-gray-400 text-sm">78% of the world lacks credit cards. DRAIN works for everyone.</p>
-              </div>
-            </div>
-
-            {/* How it works */}
-            <div className="bg-[#111] border border-[#222] rounded-2xl p-8">
-              <h3 className="text-xl font-bold mb-6 text-center">How It Works</h3>
-              <div className="grid md:grid-cols-3 gap-8">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-[#00D395]/20 text-[#00D395] flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
-                  <h4 className="font-semibold mb-2">Deposit USDC</h4>
-                  <p className="text-sm text-gray-400">Lock funds in a payment channel. One transaction, ~$0.02.</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-[#7B61FF]/20 text-[#7B61FF] flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
-                  <h4 className="font-semibold mb-2">Use AI</h4>
-                  <p className="text-sm text-gray-400">Sign vouchers for each request. Free, off-chain, instant.</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-[#00D395]/20 text-[#00D395] flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
-                  <h4 className="font-semibold mb-2">Settle</h4>
-                  <p className="text-sm text-gray-400">Provider claims payment. You withdraw remainder.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : !channel && messages.length > 0 ? (
-          // Channel Closed - Show summary and option to reopen
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="bg-[#111] border border-[#222] rounded-2xl p-8 text-center">
-              <div className="text-5xl mb-4">✅</div>
-              <h2 className="text-2xl font-bold mb-2">Channel Closed</h2>
-              <p className="text-gray-400 mb-6">Your session has ended and unused funds have been refunded.</p>
-              
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Not Connected */}
+        {!address && (
+          <div className="text-center py-20">
+            <h1 className="text-5xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-[#00D395] to-[#7B61FF] bg-clip-text text-transparent">
+                AI Without Credit Cards
+              </span>
+            </h1>
+            <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
+              Pay for AI with USDC micropayments. Real on-chain payments, real AI responses.
+            </p>
+            <div className="flex gap-4 justify-center">
               <button
-                onClick={() => {
-                  setMessages([]);
-                  setChannel(null);
-                }}
-                className="px-8 py-4 bg-gradient-to-r from-[#00D395] to-[#00B080] hover:from-[#00B080] hover:to-[#009970] text-black font-bold rounded-xl transition text-lg"
+                onClick={connectWallet}
+                className="px-8 py-4 bg-[#00D395] hover:bg-[#00B080] text-black font-bold rounded-xl transition text-lg"
               >
-                Open New Channel
+                Connect Wallet
+              </button>
+              <button
+                onClick={startDemoMode}
+                className="px-8 py-4 bg-[#222] hover:bg-[#333] text-white font-semibold rounded-xl transition text-lg border border-[#333]"
+              >
+                Try Demo
               </button>
             </div>
-            
-            {/* Previous Chat History */}
-            <div className="bg-[#111] border border-[#222] rounded-2xl p-6">
-              <h3 className="text-lg font-semibold mb-4 text-gray-400">Previous Session</h3>
-              <div className="max-h-64 overflow-y-auto space-y-3">
-                {messages.map((msg, i) => (
-                  <div key={i} className={`text-sm p-3 rounded-lg ${
-                    msg.role === 'user' 
-                      ? 'bg-[#00D395]/20 text-[#00D395] ml-8' 
-                      : msg.role === 'system'
-                      ? 'bg-[#1a1a2e] text-gray-400'
-                      : 'bg-[#1a1a1a] text-gray-300 mr-8'
-                  }`}>
-                    {msg.content.slice(0, 150)}{msg.content.length > 150 ? '...' : ''}
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
-        ) : !channel ? (
-          // Connected, No Channel
-          <div className="max-w-lg mx-auto">
+        )}
+
+        {/* Connected, No Channel */}
+        {address && !channel && (
+          <div className="max-w-md mx-auto">
             <div className="bg-[#111] border border-[#222] rounded-2xl p-8">
               <h2 className="text-2xl font-bold mb-2">Open Payment Channel</h2>
               <p className="text-gray-400 mb-6">Deposit USDC to start chatting with AI.</p>
               
               <div className="space-y-4 mb-6">
                 <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4">
-                  <label className="text-xs text-gray-500 block mb-2">DEPOSIT AMOUNT (USDC)</label>
+                  <label className="text-xs text-gray-500 block mb-2">DEPOSIT (USDC)</label>
                   <div className="flex items-center gap-3">
                     <span className="text-2xl text-gray-500">$</span>
                     <input
@@ -413,13 +669,12 @@ export default function Home() {
                       onChange={(e) => setDepositAmount(e.target.value)}
                       className="bg-transparent text-3xl font-mono w-full outline-none text-white"
                       min="1"
-                      step="1"
                     />
                   </div>
                 </div>
                 
                 <div className="flex gap-2">
-                  {['5', '10', '25', '50'].map(amt => (
+                  {['1', '5', '10', '25'].map(amt => (
                     <button
                       key={amt}
                       onClick={() => setDepositAmount(amt)}
@@ -435,89 +690,80 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4 mb-6">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-500">Estimated messages</span>
-                  <span className="text-white font-mono">~{Math.floor(parseFloat(depositAmount) / 0.003).toLocaleString()}</span>
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4 mb-6 text-sm">
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-500">Provider</span>
+                  <span className="font-mono text-xs">{PROVIDER_ADDRESS.slice(0, 14)}...</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Network fee</span>
-                  <span className="text-white font-mono">~$0.02</span>
+                <div className="flex justify-between mb-2">
+                  <span className="text-gray-500">Model</span>
+                  <span>gpt-4o-mini</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Est. messages</span>
+                  <span>~{Math.floor(parseFloat(depositAmount) * 1000)}</span>
                 </div>
               </div>
               
               <button
                 onClick={openChannel}
-                disabled={isLoading || (!isPolygon && !demoMode)}
+                disabled={isLoading || (!isPolygon && !demoMode) || usdcBalance < parseUSDC(depositAmount)}
                 className="w-full py-4 bg-gradient-to-r from-[#00D395] to-[#00B080] hover:from-[#00B080] hover:to-[#009970] disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-black font-bold rounded-xl transition text-lg"
               >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                    </svg>
-                    Opening Channel...
-                  </span>
-                ) : (
-                  `Open Channel • $${depositAmount} USDC`
-                )}
+                {isLoading ? status || 'Processing...' : `Open Channel • $${depositAmount} USDC`}
               </button>
               
               {!isPolygon && !demoMode && (
                 <button
                   onClick={switchToPolygon}
-                  className="w-full mt-3 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-sm font-medium transition"
+                  className="w-full mt-3 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg text-sm"
                 >
-                  ⚠️ Click to switch to Polygon network
+                  ⚠️ Switch to Polygon
                 </button>
               )}
               
-              {demoMode && (
-                <p className="text-purple-400 text-sm mt-3 text-center">
-                  🎮 Demo mode - no real transactions
+              {isPolygon && usdcBalance < parseUSDC(depositAmount) && (
+                <p className="text-red-400 text-sm mt-3 text-center">
+                  Insufficient USDC balance ({formatUSDC(usdcBalance)} available)
                 </p>
               )}
             </div>
           </div>
-        ) : (
-          // Chat Interface
-          <div className="flex flex-col h-[calc(100vh-140px)]">
+        )}
+
+        {/* Chat Interface */}
+        {address && channel && (
+          <div className="flex flex-col h-[calc(100vh-160px)]">
             {/* Status Bar */}
             <div className="bg-[#111] border border-[#222] rounded-xl p-4 mb-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-[#00D395] animate-pulse shadow-lg shadow-[#00D395]/50"></div>
-                  <span className="text-sm text-gray-400">Channel Active</span>
-                  <span className="text-xs text-gray-600 font-mono">{channel.id.slice(0, 10)}...</span>
+                  <div className="w-2 h-2 rounded-full bg-[#00D395] animate-pulse"></div>
+                  <span className="text-sm text-gray-400">Active</span>
+                  <span className="text-xs text-gray-600 font-mono">{channel.id.slice(0, 14)}...</span>
                   <button
-                    onClick={closeChannel}
+                    onClick={demoMode ? () => { setChannel(null); setMessages([]); } : closeChannel}
                     disabled={isLoading}
-                    className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition ml-2"
+                    className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition"
                   >
-                    Close & Refund
+                    Close
                   </button>
                 </div>
                 <div className="flex items-center gap-6 font-mono text-sm">
                   <div className="text-center">
-                    <div className="text-[#00D395] text-lg font-bold">${channel.remaining}</div>
+                    <div className="text-[#00D395] text-lg font-bold">${formatUSDC(remaining)}</div>
                     <div className="text-xs text-gray-500">remaining</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-[#7B61FF] text-lg font-bold">${channel.spent}</div>
+                    <div className="text-[#7B61FF] text-lg font-bold">${formatUSDC(channel.spent)}</div>
                     <div className="text-xs text-gray-500">spent</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-white text-lg font-bold">{voucherCount}</div>
-                    <div className="text-xs text-gray-500">vouchers</div>
                   </div>
                 </div>
               </div>
-              {/* Progress bar */}
               <div className="mt-3 h-1 bg-[#222] rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-[#00D395] to-[#7B61FF] transition-all duration-500"
-                  style={{ width: `${(parseFloat(channel.spent) / parseFloat(channel.deposit)) * 100}%` }}
+                  className="h-full bg-gradient-to-r from-[#00D395] to-[#7B61FF] transition-all"
+                  style={{ width: `${Number(channel.spent) / Number(channel.deposit) * 100}%` }}
                 />
               </div>
             </div>
@@ -534,88 +780,61 @@ export default function Home() {
                 >
                   <div className={`p-4 rounded-2xl ${
                     msg.role === 'user' 
-                      ? 'bg-[#00D395] text-black rounded-br-md' 
+                      ? 'bg-[#00D395] text-black rounded-br-sm' 
                       : msg.role === 'system'
                       ? 'bg-[#1a1a2e] border border-[#333] text-center'
-                      : 'bg-[#1a1a1a] border border-[#222] rounded-bl-md'
+                      : 'bg-[#1a1a1a] border border-[#222] rounded-bl-sm'
                   }`}>
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {msg.content}
-                    </div>
+                    <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
                     {msg.cost && (
-                      <div className="mt-2 pt-2 border-t border-white/10 text-xs text-gray-400">
-                        Cost: ${msg.cost} USDC
-                      </div>
+                      <div className="text-xs opacity-60 mt-2 text-right">{msg.cost}</div>
                     )}
                   </div>
                 </div>
               ))}
-              
               {isLoading && (
-                <div className="max-w-[85%]">
-                  <div className="bg-[#1a1a1a] border border-[#222] p-4 rounded-2xl rounded-bl-md">
-                    <div className="flex gap-1.5">
-                      <span className="w-2 h-2 bg-[#7B61FF] rounded-full animate-bounce"></span>
-                      <span className="w-2 h-2 bg-[#7B61FF] rounded-full animate-bounce" style={{animationDelay: '0.15s'}}></span>
-                      <span className="w-2 h-2 bg-[#7B61FF] rounded-full animate-bounce" style={{animationDelay: '0.3s'}}></span>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 text-gray-400">
+                  <div className="animate-pulse">●</div>
+                  <span className="text-sm">{status || 'Thinking...'}</span>
                 </div>
               )}
-              
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
-            <div className="bg-[#111] border border-[#222] rounded-xl p-3 mt-4">
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && !isLoading && sendMessage()}
-                  placeholder="Ask about DRAIN, or just chat..."
-                  className="flex-1 bg-[#0a0a0a] border border-[#222] rounded-xl px-4 py-3 outline-none text-white placeholder-gray-500 focus:border-[#333] transition"
-                  disabled={isLoading}
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={isLoading || !input.trim()}
-                  className="px-6 py-3 bg-[#7B61FF] hover:bg-[#6B51EF] disabled:bg-[#333] disabled:cursor-not-allowed rounded-xl font-semibold transition flex items-center gap-2"
-                >
-                  <span>Send</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
-              </div>
+            <div className="mt-4 flex gap-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (demoMode ? sendDemoMessage() : sendMessage())}
+                placeholder="Type a message..."
+                disabled={isLoading}
+                className="flex-1 bg-[#111] border border-[#222] rounded-xl px-4 py-3 outline-none focus:border-[#00D395] transition"
+              />
+              <button
+                onClick={demoMode ? sendDemoMessage : sendMessage}
+                disabled={isLoading || !input.trim()}
+                className="px-6 py-3 bg-[#00D395] hover:bg-[#00B080] disabled:bg-gray-700 text-black font-semibold rounded-xl transition"
+              >
+                Send
+              </button>
             </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-[#222] mt-auto">
-        <div className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between text-sm text-gray-500">
-          <div>
-            <a href="https://github.com/kimbo128/DRAIN" className="text-[#00D395] hover:underline">GitHub</a>
-            {' · '}
-            <a href="https://polygonscan.com/address/0x1C1918C99b6DcE977392E4131C91654d8aB71e64" className="hover:text-white transition">Contract</a>
-            {' · '}
-            <a href={PROVIDER_URL + '/v1/pricing'} className="hover:text-white transition">API</a>
-          </div>
-          <div>DRAIN Protocol © 2026</div>
+      <footer className="border-t border-[#222] py-4 mt-auto">
+        <div className="max-w-5xl mx-auto px-4 text-center text-xs text-gray-500">
+          <a href="https://github.com/kimbo128/DRAIN" className="hover:text-white">GitHub</a>
+          <span className="mx-2">·</span>
+          <a href={`https://polygonscan.com/address/${DRAIN_CONTRACT}`} className="hover:text-white">Contract</a>
+          <span className="mx-2">·</span>
+          <a href={`${PROVIDER_URL}/v1/pricing`} className="hover:text-white">API Pricing</a>
+          <div className="mt-1">DRAIN Protocol © 2026</div>
         </div>
       </footer>
-    </main>
+    </div>
   );
-}
-
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-      on: (event: string, callback: (...args: unknown[]) => void) => void;
-    };
-  }
 }
