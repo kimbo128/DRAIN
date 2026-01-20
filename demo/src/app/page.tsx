@@ -937,7 +937,7 @@ export default function Home() {
           <span className="mx-2">·</span>
           <a href={`https://polygonscan.com/address/${DRAIN_CONTRACT}`} className="hover:text-white">Contract</a>
           <span className="mx-2">·</span>
-          <a href={`${PROVIDER_URL}/v1/pricing`} className="hover:text-white">API Pricing</a>
+          <a href={`${selectedProvider.url}/v1/pricing`} className="hover:text-white">API Pricing</a>
           <div className="mt-1">DRAIN Protocol © 2026</div>
         </div>
       </footer>
