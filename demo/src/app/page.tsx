@@ -126,7 +126,7 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState(PROVIDERS[0].models[0]);
   
   // UI state
-  const [depositAmount, setDepositAmount] = useState('5');
+  const [depositAmount, setDepositAmount] = useState('1');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -784,7 +784,7 @@ export default function Home() {
                 
                 {/* Quick Select */}
                 <div className="flex gap-2">
-                  {['0.25', '1', '5', '10', '25'].map(amt => (
+                  {['0.10', '0.50', '1', '5', '10'].map(amt => (
                     <button
                       key={amt}
                       onClick={() => setDepositAmount(amt)}
