@@ -161,7 +161,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Connection', 'keep-alive');
       res.setHeader('X-DRAIN-Channel', voucher.channelId);
 
-      const stream = await openai.chat.completions.create({
+      const stream = openai.chat.completions.create({
         ...req.body,
         stream: true,
       });
@@ -170,7 +170,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       let inputTokens = 0;
       let fullContent = '';
 
-      for await (const chunk of stream) {
+      for await (const chunk of await stream) {
         // Track content for token counting
         const content = chunk.choices[0]?.delta?.content || '';
         fullContent += content;
