@@ -77,6 +77,12 @@ interface Message {
   cost?: string;
 }
 
+interface PreSignedVoucher {
+  amount: bigint;
+  nonce: number;
+  signature: string;
+}
+
 declare global {
   interface Window {
     ethereum?: {
@@ -124,6 +130,12 @@ export default function Home() {
   // Provider/Model state
   const [selectedProvider, setSelectedProvider] = useState(PROVIDERS[0]);
   const [selectedModel, setSelectedModel] = useState(PROVIDERS[0].models[0]);
+  
+  // Pre-sign state
+  const [autoSignEnabled, setAutoSignEnabled] = useState(true);
+  const [preSignCount, setPreSignCount] = useState(20);
+  const [preSignedVouchers, setPreSignedVouchers] = useState<PreSignedVoucher[]>([]);
+  const [usedVoucherIndex, setUsedVoucherIndex] = useState(0);
   
   // UI state
   const [depositAmount, setDepositAmount] = useState('1');
@@ -391,6 +403,8 @@ export default function Home() {
       }]);
       
       setVoucherNonce(0);
+      setPreSignedVouchers([]);
+      setUsedVoucherIndex(0);
       setStatus('');
       await fetchUSDCBalance(address);
       
@@ -434,6 +448,8 @@ export default function Home() {
       
       setChannel(null);
       setVoucherNonce(0);
+      setPreSignedVouchers([]);
+      setUsedVoucherIndex(0);
       setStatus('');
       await fetchUSDCBalance(address);
       
@@ -490,6 +506,75 @@ export default function Home() {
   };
 
   // ============================================================================
+  // PRE-SIGN VOUCHERS
+  // ============================================================================
+
+  const preSignVouchers = async (count: number): Promise<PreSignedVoucher[]> => {
+    if (!address || !window.ethereum || !channel) {
+      throw new Error('Not connected or no channel');
+    }
+
+    const vouchers: PreSignedVoucher[] = [];
+    const costPerVoucher = 10000n; // $0.01 max per message
+    const currentSpent = channel.spent;
+
+    setStatus(`Pre-signing ${count} vouchers...`);
+
+    // Sign all vouchers in one batch popup by creating all signatures
+    for (let i = 0; i < count; i++) {
+      const amount = currentSpent + (BigInt(i + 1) * costPerVoucher);
+      const nonce = voucherNonce + i + 1;
+      
+      // Check if we'd exceed deposit
+      if (amount > channel.deposit) {
+        setStatus(`Pre-signed ${i} vouchers (reached deposit limit)`);
+        break;
+      }
+
+      setStatus(`Signing voucher ${i + 1}/${count}...`);
+      
+      try {
+        const signature = await signVoucher(amount, nonce);
+        vouchers.push({ amount, nonce, signature });
+      } catch (e) {
+        // User cancelled or error
+        if (vouchers.length > 0) {
+          setStatus(`Pre-signed ${vouchers.length} vouchers`);
+          break;
+        }
+        throw e;
+      }
+    }
+
+    return vouchers;
+  };
+
+  const startPreSignSession = async () => {
+    if (!channel) return;
+    
+    setIsLoading(true);
+    try {
+      const vouchers = await preSignVouchers(preSignCount);
+      setPreSignedVouchers(vouchers);
+      setUsedVoucherIndex(0);
+      
+      if (vouchers.length > 0) {
+        setMessages(prev => [...prev, {
+          role: 'system',
+          content: `✅ Pre-signed ${vouchers.length} vouchers!\n\nYou can now send ${vouchers.length} messages without MetaMask popups.\nMax authorized: $${formatUSDC(vouchers[vouchers.length - 1].amount)} USDC`
+        }]);
+      }
+      setStatus('');
+    } catch (e) {
+      console.error('Failed to pre-sign:', e);
+      setStatus('');
+      alert('Failed to pre-sign vouchers: ' + (e as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ============================================================================
   // CHAT FUNCTION
   // ============================================================================
 
@@ -515,20 +600,46 @@ export default function Home() {
         return;
       }
       
-      // Sign voucher for new total
-      const nextNonce = voucherNonce + 1;
-      setStatus('Signing voucher...');
-      const signature = await signVoucher(newTotal, nextNonce);
+      let signature: string;
+      let nextNonce: number;
+      let voucherAmount: bigint;
+      
+      // Check if we have pre-signed vouchers available
+      const remainingVouchers = preSignedVouchers.length - usedVoucherIndex;
+      const usePreSigned = autoSignEnabled && remainingVouchers > 0;
+      
+      if (usePreSigned) {
+        // Use pre-signed voucher (no popup!)
+        const voucher = preSignedVouchers[usedVoucherIndex];
+        signature = voucher.signature;
+        nextNonce = voucher.nonce;
+        voucherAmount = voucher.amount;
+        setUsedVoucherIndex(prev => prev + 1);
+        setStatus('Sending to AI...');
+      } else if (!autoSignEnabled || preSignedVouchers.length === 0) {
+        // Manual signing (will show popup)
+        nextNonce = voucherNonce + 1;
+        voucherAmount = newTotal;
+        setStatus('Signing voucher...');
+        signature = await signVoucher(voucherAmount, nextNonce);
+        setStatus('Sending to AI...');
+      } else {
+        // Ran out of pre-signed vouchers
+        setMessages(prev => [...prev, {
+          role: 'system',
+          content: `⚠️ Ran out of pre-signed vouchers!\n\nClick "Pre-sign More" to continue chatting without popups,\nor disable Auto-Sign to sign each message manually.`
+        }]);
+        setIsLoading(false);
+        return;
+      }
       
       // Create voucher header (JSON format as expected by provider)
       const voucherHeader = JSON.stringify({
         channelId: channel.id,
-        amount: newTotal.toString(),
+        amount: voucherAmount.toString(),
         nonce: nextNonce.toString(),
         signature: signature,
       });
-      
-      setStatus('Sending to AI...');
       
       // Call provider API
       const response = await fetch(`${selectedProvider.url}/v1/chat/completions`, {
@@ -560,23 +671,31 @@ export default function Home() {
       // Get cost from headers
       const cost = response.headers.get('X-DRAIN-Cost');
       const totalSpent = response.headers.get('X-DRAIN-Total');
-      const remaining = response.headers.get('X-DRAIN-Remaining');
       
       // Update channel state
       const actualCost = cost ? BigInt(cost) : estimatedCost;
-      const actualTotal = totalSpent ? BigInt(totalSpent) : newTotal;
+      const actualTotal = totalSpent ? BigInt(totalSpent) : voucherAmount;
       
       setChannel(prev => prev ? {
         ...prev,
         spent: actualTotal,
       } : null);
       
-      setVoucherNonce(nextNonce);
+      // Only update nonce for manual signing
+      if (!usePreSigned) {
+        setVoucherNonce(nextNonce);
+      }
+      
+      // Show remaining pre-signed vouchers in cost
+      const vouchersLeft = usePreSigned ? remainingVouchers - 1 : 0;
+      const costDisplay = usePreSigned 
+        ? `$${formatUSDC(actualCost)} (${vouchersLeft} pre-signed left)`
+        : `$${formatUSDC(actualCost)}`;
       
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: assistantMessage,
-        cost: `$${formatUSDC(actualCost)}`,
+        cost: costDisplay,
       }]);
       
       setStatus('');
@@ -937,6 +1056,90 @@ export default function Home() {
                   style={{ width: `${Number(channel.spent) / Number(channel.deposit) * 100}%` }}
                 />
               </div>
+              
+              {/* Auto-Sign Panel */}
+              {!demoMode && (
+                <div className="mt-4 pt-4 border-t border-[#222]">
+                  <div className="flex items-center justify-between gap-4 flex-wrap">
+                    {/* Toggle */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setAutoSignEnabled(!autoSignEnabled)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          autoSignEnabled ? 'bg-[#00D395]' : 'bg-[#333]'
+                        }`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                          autoSignEnabled ? 'left-7' : 'left-1'
+                        }`} />
+                      </button>
+                      <div>
+                        <div className="text-sm font-medium">
+                          {autoSignEnabled ? 'Auto-Sign' : 'Manual Sign'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {autoSignEnabled 
+                            ? 'No popups per message' 
+                            : 'Sign each message manually'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Pre-Sign Controls */}
+                    {autoSignEnabled && (
+                      <div className="flex items-center gap-3">
+                        {/* Voucher Count Display */}
+                        <div className="text-center px-3">
+                          <div className={`text-lg font-bold ${
+                            preSignedVouchers.length - usedVoucherIndex > 0 
+                              ? 'text-[#00D395]' 
+                              : 'text-yellow-400'
+                          }`}>
+                            {preSignedVouchers.length - usedVoucherIndex}
+                          </div>
+                          <div className="text-xs text-gray-500">vouchers left</div>
+                        </div>
+                        
+                        {/* Slider for count */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min="5"
+                            max="50"
+                            step="5"
+                            value={preSignCount}
+                            onChange={(e) => setPreSignCount(parseInt(e.target.value))}
+                            className="w-20 h-1.5 bg-[#222] rounded-lg appearance-none cursor-pointer accent-[#7B61FF]"
+                          />
+                          <span className="text-xs text-gray-400 w-6">{preSignCount}</span>
+                        </div>
+                        
+                        {/* Pre-Sign Button */}
+                        <button
+                          onClick={startPreSignSession}
+                          disabled={isLoading}
+                          className="px-4 py-2 bg-[#7B61FF] hover:bg-[#6B51EF] disabled:bg-gray-700 text-white font-medium rounded-lg text-sm transition flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                          {preSignedVouchers.length > 0 ? 'Sign More' : `Sign ${preSignCount}`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Help Text */}
+                  {autoSignEnabled && preSignedVouchers.length === 0 && (
+                    <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-xs text-yellow-400">
+                        💡 <strong>Tip:</strong> Click "Sign {preSignCount}" to pre-authorize {preSignCount} messages. 
+                        You'll sign once, then chat without MetaMask popups!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Messages */}
