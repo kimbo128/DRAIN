@@ -520,8 +520,13 @@ export default function Home() {
       setStatus('Signing voucher...');
       const signature = await signVoucher(newTotal, nextNonce);
       
-      // Create voucher header
-      const voucherHeader = `${channel.id}:${newTotal.toString()}:${nextNonce}:${signature}`;
+      // Create voucher header (JSON format as expected by provider)
+      const voucherHeader = JSON.stringify({
+        channelId: channel.id,
+        amount: newTotal.toString(),
+        nonce: nextNonce.toString(),
+        signature: signature,
+      });
       
       setStatus('Sending to AI...');
       
