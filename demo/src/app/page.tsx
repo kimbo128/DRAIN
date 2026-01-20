@@ -77,8 +77,13 @@ function formatUSDC(wei: bigint): string {
 }
 
 function parseUSDC(amount: string): bigint {
-  return BigInt(Math.floor(parseFloat(amount) * 1_000_000));
+  const num = parseFloat(amount);
+  if (isNaN(num) || num <= 0) return 0n;
+  return BigInt(Math.floor(num * 1_000_000));
 }
+
+const MIN_DEPOSIT = 0.5;  // $0.50 minimum
+const MAX_DEPOSIT = 100;  // $100 maximum
 
 // ============================================================================
 // COMPONENT
@@ -658,23 +663,38 @@ export default function Home() {
               <h2 className="text-2xl font-bold mb-2">Open Payment Channel</h2>
               <p className="text-gray-400 mb-6">Deposit USDC to start chatting with AI.</p>
               
-              <div className="space-y-4 mb-6">
-                <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4">
-                  <label className="text-xs text-gray-500 block mb-2">DEPOSIT (USDC)</label>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl text-gray-500">$</span>
-                    <input
-                      type="number"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      className="bg-transparent text-3xl font-mono w-full outline-none text-white"
-                      min="1"
-                    />
+              <div className="space-y-6 mb-6">
+                {/* Amount Display */}
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-white mb-2">
+                    ${parseFloat(depositAmount) || 0}
+                  </div>
+                  <div className="text-gray-500 text-sm">USDC deposit</div>
+                </div>
+                
+                {/* Slider */}
+                <div className="space-y-2">
+                  <input
+                    type="range"
+                    min={MIN_DEPOSIT}
+                    max={MAX_DEPOSIT}
+                    step="0.5"
+                    value={parseFloat(depositAmount) || MIN_DEPOSIT}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    className="w-full h-2 bg-[#222] rounded-lg appearance-none cursor-pointer accent-[#00D395]"
+                    style={{
+                      background: `linear-gradient(to right, #00D395 0%, #00D395 ${((parseFloat(depositAmount) || MIN_DEPOSIT) - MIN_DEPOSIT) / (MAX_DEPOSIT - MIN_DEPOSIT) * 100}%, #222 ${((parseFloat(depositAmount) || MIN_DEPOSIT) - MIN_DEPOSIT) / (MAX_DEPOSIT - MIN_DEPOSIT) * 100}%, #222 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>${MIN_DEPOSIT}</span>
+                    <span>${MAX_DEPOSIT}</span>
                   </div>
                 </div>
                 
+                {/* Quick Select */}
                 <div className="flex gap-2">
-                  {['1', '5', '10', '25'].map(amt => (
+                  {['1', '5', '10', '25', '50'].map(amt => (
                     <button
                       key={amt}
                       onClick={() => setDepositAmount(amt)}
@@ -690,27 +710,44 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4 mb-6 text-sm">
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-500">Provider</span>
-                  <span className="font-mono text-xs">{PROVIDER_ADDRESS.slice(0, 14)}...</span>
+              {/* Estimates */}
+              <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-[#00D395]">
+                      ~{Math.floor((parseFloat(depositAmount) || 0) * 1000).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500">messages</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-[#7B61FF]">
+                      ~${((parseFloat(depositAmount) || 0) / 1000 * 1000).toFixed(4)}
+                    </div>
+                    <div className="text-xs text-gray-500">per message</div>
+                  </div>
                 </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-500">Model</span>
-                  <span>gpt-4o-mini</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Est. messages</span>
-                  <span>~{Math.floor(parseFloat(depositAmount) * 1000)}</span>
+                <div className="mt-4 pt-4 border-t border-[#222] text-xs text-gray-500 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Model</span>
+                    <span className="text-gray-300">gpt-4o-mini</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Provider</span>
+                    <span className="font-mono">{PROVIDER_ADDRESS.slice(0, 10)}...</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Network</span>
+                    <span className="text-gray-300">Polygon</span>
+                  </div>
                 </div>
               </div>
               
               <button
                 onClick={openChannel}
-                disabled={isLoading || (!isPolygon && !demoMode) || usdcBalance < parseUSDC(depositAmount)}
+                disabled={isLoading || (!isPolygon && !demoMode) || parseUSDC(depositAmount) === 0n || (!demoMode && usdcBalance < parseUSDC(depositAmount))}
                 className="w-full py-4 bg-gradient-to-r from-[#00D395] to-[#00B080] hover:from-[#00B080] hover:to-[#009970] disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-black font-bold rounded-xl transition text-lg"
               >
-                {isLoading ? status || 'Processing...' : `Open Channel • $${depositAmount} USDC`}
+                {isLoading ? status || 'Processing...' : `Open Channel • $${parseFloat(depositAmount) || 0} USDC`}
               </button>
               
               {!isPolygon && !demoMode && (
@@ -722,7 +759,7 @@ export default function Home() {
                 </button>
               )}
               
-              {isPolygon && usdcBalance < parseUSDC(depositAmount) && (
+              {isPolygon && !demoMode && usdcBalance < parseUSDC(depositAmount) && parseUSDC(depositAmount) > 0n && (
                 <p className="text-red-400 text-sm mt-3 text-center">
                   Insufficient USDC balance ({formatUSDC(usdcBalance)} available)
                 </p>
