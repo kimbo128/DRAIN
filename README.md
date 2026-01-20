@@ -167,6 +167,37 @@ const voucher = await consumer.signVoucher(channelId, '0.50');
 
 See [`sdk/README.md`](./sdk/README.md) for full documentation.
 
+## Reference Provider
+
+OpenAI-compatible API server that accepts DRAIN payments:
+
+```bash
+cd provider
+cp env.example .env  # Configure OPENAI_API_KEY, PROVIDER_PRIVATE_KEY
+npm install
+npm run dev
+```
+
+**Endpoints:**
+```
+GET  /v1/pricing          → View pricing per model
+GET  /v1/models           → List available models  
+POST /v1/chat/completions → Chat (with X-DRAIN-Voucher header)
+```
+
+**DRAIN Headers:**
+```http
+# Request
+X-DRAIN-Voucher: {"channelId":"0x...","amount":"1000000","nonce":"1","signature":"0x..."}
+
+# Response
+X-DRAIN-Cost: 8250
+X-DRAIN-Total: 158250
+X-DRAIN-Remaining: 9841750
+```
+
+See [`provider/README.md`](./provider/README.md) for full documentation.
+
 ## Development Status
 
 | Component               | Status         |
