@@ -366,6 +366,7 @@ export default function Home() {
 
   const saveChannelToStorage = (channelId: string, provider: string) => {
     try {
+      console.log('[DRAIN] Saving channel to storage:', channelId, provider);
       const stored = localStorage.getItem(STORAGE_KEY);
       const channels: { id: string; provider: string; savedAt: number }[] = stored ? JSON.parse(stored) : [];
       
@@ -373,17 +374,23 @@ export default function Home() {
       if (!channels.find(c => c.id === channelId)) {
         channels.push({ id: channelId, provider, savedAt: Date.now() });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(channels));
+        console.log('[DRAIN] Channel saved. Total channels:', channels.length);
+      } else {
+        console.log('[DRAIN] Channel already exists in storage');
       }
     } catch (e) {
-      console.error('Failed to save channel to storage:', e);
+      console.error('[DRAIN] Failed to save channel to storage:', e);
     }
   };
 
   const getStoredChannels = (): { id: string; provider: string }[] => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
+      const channels = stored ? JSON.parse(stored) : [];
+      console.log('[DRAIN] Retrieved stored channels:', channels);
+      return channels;
     } catch (e) {
+      console.error('[DRAIN] Failed to get stored channels:', e);
       return [];
     }
   };
@@ -394,85 +401,44 @@ export default function Home() {
 
   const fetchChannelHistory = async (userAddress: string) => {
     setIsLoadingHistory(true);
+    console.log('[DRAIN] Fetching channel history for:', userAddress);
+    
     try {
-      // ChannelOpened event topic: keccak256("ChannelOpened(bytes32,address,address,uint256,uint256)")
-      // = 0x506f81b7a67b45bfbc6167fd087b3dd9b65b4531a2380ec406aab5b57ac62152
-      const eventTopic = '0x506f81b7a67b45bfbc6167fd087b3dd9b65b4531a2380ec406aab5b57ac62152';
-      const paddedAddress = '0x' + userAddress.slice(2).toLowerCase().padStart(64, '0');
-      
-      // Get current block number first
-      const blockResponse = await fetch('https://polygon-rpc.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_blockNumber',
-          params: [],
-          id: 1,
-        }),
-      });
-      const blockJson = await blockResponse.json();
-      const currentBlock = parseInt(blockJson.result, 16);
-      
-      // Look back ~7 days (Polygon: ~2 sec blocks = ~300k blocks/week)
-      const fromBlock = Math.max(0, currentBlock - 300000);
-      
-      // Query logs for ChannelOpened events where consumer (topic2) is the user
-      const response = await fetch('https://polygon-rpc.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: 'eth_getLogs',
-          params: [{
-            address: DRAIN_CONTRACT,
-            topics: [eventTopic, null, paddedAddress], // topic0=event, topic1=channelId, topic2=consumer
-            fromBlock: '0x' + fromBlock.toString(16),
-            toBlock: 'latest',
-          }],
-          id: 1,
-        }),
-      });
-      
-      const json = await response.json();
-      const logs = json.result || [];
-      
-      // Collect channel IDs from events
-      const channelIdsFromEvents = new Set<string>();
-      const providerMap = new Map<string, string>();
-      
-      for (const log of logs) {
-        const channelId = log.topics[1];
-        const provider = '0x' + log.topics[3].slice(26);
-        channelIdsFromEvents.add(channelId);
-        providerMap.set(channelId, provider);
-      }
-      
-      // Also add locally stored channels (in case events are too old)
+      // Primary source: localStorage (most reliable for user's own channels)
       const storedChannels = getStoredChannels();
-      for (const stored of storedChannels) {
-        channelIdsFromEvents.add(stored.id);
-        if (!providerMap.has(stored.id)) {
-          providerMap.set(stored.id, stored.provider);
-        }
+      console.log('[DRAIN] Stored channels:', storedChannels);
+      
+      if (storedChannels.length === 0) {
+        console.log('[DRAIN] No stored channels found');
+        setChannelHistory([]);
+        setIsLoadingHistory(false);
+        return;
       }
       
-      // Parse each channel and check status
+      // Check each stored channel's on-chain status
       const channels: ChannelHistoryItem[] = [];
       
-      for (const channelId of channelIdsFromEvents) {
-        const provider = providerMap.get(channelId) || '0x0000000000000000000000000000000000000000';
+      for (const stored of storedChannels) {
+        console.log('[DRAIN] Checking channel:', stored.id);
         
-        // Get current channel state
-        const channelData = await getChannelState(channelId);
-        
-        if (channelData) {
+        try {
+          const channelData = await getChannelState(stored.id);
+          console.log('[DRAIN] Channel data:', channelData);
+          
+          if (!channelData) {
+            console.log('[DRAIN] No data for channel:', stored.id);
+            continue;
+          }
+          
           const now = Math.floor(Date.now() / 1000);
           const isExpired = now >= channelData.expiry;
           const isClosed = channelData.consumer === '0x0000000000000000000000000000000000000000';
           
-          // Only show channels for this user
-          if (channelData.consumer.toLowerCase() !== userAddress.toLowerCase() && !isClosed) {
+          // Check if this channel belongs to this user
+          const isOwner = channelData.consumer.toLowerCase() === userAddress.toLowerCase();
+          
+          if (!isOwner && !isClosed) {
+            console.log('[DRAIN] Channel not owned by user:', stored.id);
             continue;
           }
           
@@ -486,29 +452,34 @@ export default function Home() {
           }
           
           channels.push({
-            id: channelId,
-            provider: provider,
+            id: stored.id,
+            provider: stored.provider,
             deposit: channelData.deposit,
             claimed: channelData.claimed,
             expiry: channelData.expiry,
             status,
             refundable: channelData.deposit - channelData.claimed,
           });
+          
+          console.log('[DRAIN] Added channel:', stored.id, 'status:', status);
+        } catch (channelError) {
+          console.error('[DRAIN] Error checking channel:', stored.id, channelError);
         }
       }
       
-      // Sort by expiry (newest first), but active first
+      // Sort: active first, then expired, then closed
       channels.sort((a, b) => {
-        if (a.status === 'active' && b.status !== 'active') return -1;
-        if (b.status === 'active' && a.status !== 'active') return 1;
-        if (a.status === 'expired' && b.status === 'closed') return -1;
-        if (b.status === 'expired' && a.status === 'closed') return 1;
+        const order = { active: 0, expired: 1, closed: 2 };
+        if (order[a.status] !== order[b.status]) {
+          return order[a.status] - order[b.status];
+        }
         return b.expiry - a.expiry;
       });
       
+      console.log('[DRAIN] Final channel list:', channels);
       setChannelHistory(channels);
     } catch (e) {
-      console.error('Failed to fetch channel history:', e);
+      console.error('[DRAIN] Failed to fetch channel history:', e);
     } finally {
       setIsLoadingHistory(false);
     }
@@ -1177,7 +1148,7 @@ export default function Home() {
               <span className="bg-gradient-to-r from-[#00D395] to-[#7B61FF] bg-clip-text text-transparent">
                 AI Without Credit Cards
               </span>
-            </h1>
+          </h1>
             <p className="text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
               Pay for AI with USDC micropayments. Real on-chain payments, real AI responses.
             </p>
@@ -1216,7 +1187,10 @@ export default function Home() {
                 
                 {/* Slider */}
                 <div className="space-y-2">
+                  <label htmlFor="deposit-amount" className="sr-only">Deposit Amount</label>
                   <input
+                    id="deposit-amount"
+                    name="deposit-amount"
                     type="range"
                     min={MIN_DEPOSIT}
                     max={MAX_DEPOSIT}
@@ -1224,6 +1198,7 @@ export default function Home() {
                     value={parseFloat(depositAmount) || MIN_DEPOSIT}
                     onChange={(e) => setDepositAmount(e.target.value)}
                     className="w-full h-2 bg-[#222] rounded-lg appearance-none cursor-pointer accent-[#00D395]"
+                    autoComplete="off"
                     style={{
                       background: `linear-gradient(to right, #00D395 0%, #00D395 ${((parseFloat(depositAmount) || MIN_DEPOSIT) - MIN_DEPOSIT) / (MAX_DEPOSIT - MIN_DEPOSIT) * 100}%, #222 ${((parseFloat(depositAmount) || MIN_DEPOSIT) - MIN_DEPOSIT) / (MAX_DEPOSIT - MIN_DEPOSIT) * 100}%, #222 100%)`
                     }}
@@ -1256,8 +1231,10 @@ export default function Home() {
               <div className="space-y-3 mb-6">
                 {/* Provider Selection */}
                 <div className="bg-[#0a0a0a] border border-[#222] rounded-xl p-3">
-                  <label className="text-xs text-gray-500 block mb-2">AI PROVIDER</label>
+                  <label htmlFor="provider-select" className="text-xs text-gray-500 block mb-2">AI PROVIDER</label>
                   <select
+                    id="provider-select"
+                    name="provider-select"
                     value={selectedProvider.id}
                     onChange={(e) => {
                       const provider = PROVIDERS.find(p => p.id === e.target.value)!;
@@ -1348,7 +1325,7 @@ export default function Home() {
                   Insufficient USDC balance ({formatUSDC(usdcBalance)} available)
                 </p>
               )}
-            </div>
+        </div>
             
             {/* Channel History Section */}
             {!demoMode && (
@@ -1587,7 +1564,7 @@ export default function Home() {
                       <div>
                         <div className="text-sm font-medium">
                           {autoSignEnabled ? 'Auto-Sign' : 'Manual Sign'}
-                        </div>
+        </div>
                         <div className="text-xs text-gray-500">
                           {autoSignEnabled 
                             ? 'No popups per message' 
@@ -1613,7 +1590,10 @@ export default function Home() {
                         
                         {/* Slider for count */}
                         <div className="flex items-center gap-2">
+                          <label htmlFor="presign-count" className="sr-only">Pre-sign voucher count</label>
                           <input
+                            id="presign-count"
+                            name="presign-count"
                             type="range"
                             min="5"
                             max="50"
@@ -1621,6 +1601,7 @@ export default function Home() {
                             value={preSignCount}
                             onChange={(e) => setPreSignCount(parseInt(e.target.value))}
                             className="w-20 h-1.5 bg-[#222] rounded-lg appearance-none cursor-pointer accent-[#7B61FF]"
+                            autoComplete="off"
                           />
                           <span className="text-xs text-gray-400 w-6">{preSignCount}</span>
                         </div>
@@ -1688,13 +1669,17 @@ export default function Home() {
 
             {/* Input */}
             <div className="mt-4 flex gap-3">
+              <label htmlFor="chat-input" className="sr-only">Message</label>
               <input
+                id="chat-input"
+                name="chat-input"
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (demoMode ? sendDemoMessage() : sendMessage())}
                 placeholder="Type a message..."
                 disabled={isLoading}
+                autoComplete="off"
                 className="flex-1 bg-[#111] border border-[#222] rounded-xl px-4 py-3 outline-none focus:border-[#00D395] transition"
               />
               <button
