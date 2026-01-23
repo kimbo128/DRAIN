@@ -285,6 +285,59 @@ Config locations:
 | `DRAIN_CHAIN_ID` | No | 137 (Polygon) |
 | `DRAIN_RPC_URL` | No | https://polygon-rpc.com |
 
+**RPC Note:** Free RPCs have rate limits. If you get "rate limit" errors, try:
+- `https://polygon-bor-rpc.publicnode.com` (PublicNode)
+- `https://rpc.ankr.com/polygon` (requires free API key)
+- Or use a paid RPC provider (Alchemy, Infura)
+
+---
+
+## Lessons Learned (E2E Testing)
+
+### Cost Estimation is Conservative
+
+The MCP server estimates costs based on message length and model pricing. Actual costs are usually **much lower** (often 10-100x less than estimate). This is intentional to prevent over-spending, but means:
+- A $0.10 channel can handle **many more requests** than you might think
+- Don't worry if estimate seems high - actual cost will be lower
+
+**Example:** Estimated $0.01, actual cost $0.000005 (5 USDC wei)
+
+### Channel "claimed" vs "spent"
+
+When checking `drain_channel_status()`, you'll see:
+- `claimed`: Amount provider has claimed **on-chain** (usually 0 until they claim)
+- `remaining`: Deposit minus claimed (not minus spent)
+
+**Important:** Vouchers are signed off-chain. The provider can claim anytime, but usually waits to accumulate multiple payments to save gas.
+
+### RPC Rate Limits
+
+Free public RPCs (like `polygon-rpc.com`) have rate limits. If you see errors:
+1. Wait 10-15 seconds and retry
+2. Switch to a different RPC (see Environment Variables above)
+3. Use a paid RPC for production
+
+### Channel ID is Critical
+
+**Always persist the channelId!** If you lose it:
+- You cannot make more requests
+- You cannot close the channel (funds locked until expiry + provider claims)
+
+**Best practice:** Store channelId immediately after `drain_open_channel()` with:
+- Creation timestamp
+- Expiry timestamp  
+- Provider ID
+
+### Actual Costs are Tiny
+
+Real-world example from E2E test:
+- Channel: $0.10 USDC
+- Request: "What is 2+2?" → "Four."
+- Actual cost: **$0.000005** (5 USDC wei)
+- You could make **20,000 requests** with $0.10!
+
+This means small channels ($0.10-$0.50) are perfect for testing and light usage.
+
 ---
 
 ## Links

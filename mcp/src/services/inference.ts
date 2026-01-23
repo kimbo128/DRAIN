@@ -52,13 +52,27 @@ export class InferenceService {
     channelId: Hash,
     request: ChatRequest
   ): Promise<ChatResponse> {
-    // Estimate cost (pessimistic: $0.01 per request as buffer)
-    const estimatedCost = '0.01';
+    // Estimate cost based on message length and model pricing
+    // Rough estimate: count characters as ~4 chars per token
+    const inputTokens = Math.ceil(
+      request.messages.reduce((sum, m) => sum + m.content.length, 0) / 4
+    );
+    const expectedOutputTokens = request.max_tokens ?? 100; // Default estimate
+    
+    const estimatedCost = this.estimateCost(
+      provider,
+      request.model,
+      inputTokens,
+      expectedOutputTokens
+    );
     
     // Check if channel has enough balance
     const hasBalance = await this.channelService.hasBalance(channelId, estimatedCost);
     if (!hasBalance) {
-      throw new Error('Insufficient channel balance for this request');
+      throw new Error(
+        `Insufficient channel balance. Need ~$${estimatedCost} but channel has less. ` +
+        `Use drain_channel_status() to check balance.`
+      );
     }
     
     // Sign voucher for payment
