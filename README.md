@@ -354,7 +354,6 @@ Features:
 | **Provider Directory**  | ✅ **[Live](https://believable-inspiration-production-b1c6.up.railway.app/directory)** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
 | **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** |
-| Security Audit          | 📋 Planned     |
 
 ### Deployed Contracts
 
@@ -363,7 +362,6 @@ Features:
 | **Polygon Mainnet** | DrainChannel | [`0x1C1918C99b6DcE977392E4131C91654d8aB71e64`](https://polygonscan.com/address/0x1C1918C99b6DcE977392E4131C91654d8aB71e64) |
 | Polygon Amoy (Testnet) | DrainChannel | [`0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C`](https://amoy.polygonscan.com/address/0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C) |
 
-> ⚠️ **Note:** This contract has not been audited. Use at your own risk with small amounts.
 
 ## Getting Started
 
@@ -464,9 +462,6 @@ No. Open a new channel instead. This keeps the protocol simple and avoids edge c
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for guidelines.
 
-## Security
-
-This project has not yet been audited. Use at your own risk.
 
 ## License
 
