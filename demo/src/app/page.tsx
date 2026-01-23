@@ -124,7 +124,68 @@ const MIN_DEPOSIT = 0.10;  // $0.10 minimum - true micropayments!
 const MAX_DEPOSIT = 100;   // $100 maximum
 
 // ============================================================================
-// COMPONENT
+// HELPER COMPONENTS
+// ============================================================================
+
+function ExpiryBadge({ expiry }: { expiry: number }) {
+  const now = Math.floor(Date.now() / 1000);
+  const remaining = expiry - now;
+  const isExpired = remaining <= 0;
+  const hours = Math.floor(Math.abs(remaining) / 3600);
+  const minutes = Math.floor((Math.abs(remaining) % 3600) / 60);
+  
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+      isExpired 
+        ? 'bg-yellow-500/20 text-yellow-400' 
+        : 'bg-gray-500/20 text-gray-400'
+    }`}>
+      {isExpired ? '⏰ Expired' : `⏱️ ${hours}h ${minutes}m left`}
+    </span>
+  );
+}
+
+function ChannelActionButton({ 
+  channel, 
+  remaining, 
+  isLoading, 
+  onClose, 
+  onExit 
+}: { 
+  channel: Channel;
+  remaining: bigint;
+  isLoading: boolean;
+  onClose: () => void;
+  onExit: () => void;
+}) {
+  const now = Math.floor(Date.now() / 1000);
+  const isExpired = now >= channel.expiry;
+  
+  if (isExpired) {
+    return (
+      <button
+        onClick={onClose}
+        disabled={isLoading}
+        className="px-3 py-1 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg text-xs font-semibold transition"
+      >
+        Claim Refund (${formatUSDC(remaining)})
+      </button>
+    );
+  }
+  
+  return (
+    <button
+      onClick={onExit}
+      className="px-3 py-1 bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 rounded-lg text-xs font-medium transition"
+      title="Channel will remain open. Return later to claim refund after expiry."
+    >
+      Exit (keep channel)
+    </button>
+  );
+}
+
+// ============================================================================
+// MAIN COMPONENT
 // ============================================================================
 
 export default function Home() {
@@ -308,6 +369,23 @@ export default function Home() {
       const eventTopic = '0x506f81b7a67b45bfbc6167fd087b3dd9b65b4531a2380ec406aab5b57ac62152';
       const paddedAddress = '0x' + userAddress.slice(2).toLowerCase().padStart(64, '0');
       
+      // Get current block number first
+      const blockResponse = await fetch('https://polygon-rpc.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_blockNumber',
+          params: [],
+          id: 1,
+        }),
+      });
+      const blockJson = await blockResponse.json();
+      const currentBlock = parseInt(blockJson.result, 16);
+      
+      // Look back ~7 days (Polygon: ~2 sec blocks = ~300k blocks/week)
+      const fromBlock = Math.max(0, currentBlock - 300000);
+      
       // Query logs for ChannelOpened events where consumer (topic2) is the user
       const response = await fetch('https://polygon-rpc.com', {
         method: 'POST',
@@ -318,7 +396,7 @@ export default function Home() {
           params: [{
             address: DRAIN_CONTRACT,
             topics: [eventTopic, null, paddedAddress], // topic0=event, topic1=channelId, topic2=consumer
-            fromBlock: '0x0',
+            fromBlock: '0x' + fromBlock.toString(16),
             toBlock: 'latest',
           }],
           id: 1,
@@ -1374,23 +1452,9 @@ export default function Home() {
                     {selectedModel.name}
                   </span>
                   {/* Expiry Timer */}
-                  {!demoMode && (() => {
-                    const now = Math.floor(Date.now() / 1000);
-                    const remaining = channel.expiry - now;
-                    const isExpired = remaining <= 0;
-                    const hours = Math.floor(Math.abs(remaining) / 3600);
-                    const minutes = Math.floor((Math.abs(remaining) % 3600) / 60);
-                    
-                    return (
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        isExpired 
-                          ? 'bg-yellow-500/20 text-yellow-400' 
-                          : 'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {isExpired ? '⏰ Expired' : `⏱️ ${hours}h ${minutes}m left`}
-                      </span>
-                    );
-                  })()}
+                  {!demoMode && (
+                    <ExpiryBadge expiry={channel.expiry} />
+                  )}
                   {/* Close/Refund Button */}
                   {demoMode ? (
                     <button
@@ -1400,34 +1464,21 @@ export default function Home() {
                     >
                       Close Demo
                     </button>
-                  ) : (() => {
-                    const now = Math.floor(Date.now() / 1000);
-                    const isExpired = now >= channel.expiry;
-                    
-                    return isExpired ? (
-                      <button
-                        onClick={closeChannel}
-                        disabled={isLoading}
-                        className="px-3 py-1 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg text-xs font-semibold transition"
-                      >
-                        Claim Refund (${formatUSDC(remaining)})
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setChannel(null);
-                          setMessages([]);
-                          setVoucherNonce(0);
-                          setPreSignedVouchers([]);
-                          setUsedVoucherIndex(0);
-                        }}
-                        className="px-3 py-1 bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 rounded-lg text-xs font-medium transition"
-                        title="Channel will remain open. Return later to claim refund after expiry."
-                      >
-                        Exit (keep channel)
-                      </button>
-                    );
-                  })()}
+                  ) : (
+                    <ChannelActionButton 
+                      channel={channel}
+                      remaining={remaining}
+                      isLoading={isLoading}
+                      onClose={closeChannel}
+                      onExit={() => {
+                        setChannel(null);
+                        setMessages([]);
+                        setVoucherNonce(0);
+                        setPreSignedVouchers([]);
+                        setUsedVoucherIndex(0);
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="flex items-center gap-6 font-mono text-sm">
                   <div className="text-center">
