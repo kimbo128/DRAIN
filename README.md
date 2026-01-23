@@ -1,7 +1,7 @@
 # DRAIN
 
 <div align="center">
-  <img src="docs/drain-logo.png" alt="DRAIN Logo" width="600">
+  <img src="docs/drain-logo.png" alt="DRAIN Logo" width="800">
 </div>
 
 **Decentralized Runtime for AI Networks**
