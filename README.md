@@ -44,9 +44,9 @@ DRAIN is like a **prepaid card for AI**: deposit USDC, use it across requests, w
 │    Consumer                                      Provider        │
 │        │                                             │           │
 │        │───────── Request + Voucher ────────────────►│           │
-│        │◄──────── AI Response ──────────────────────│           │
+│        │◄──────── AI Response ───────────────────────│           │
 │        │───────── Request + Voucher ────────────────►│           │
-│        │◄──────── AI Response ──────────────────────│           │
+│        │◄──────── AI Response ───────────────────────│           │
 │        │                    ...                      │           │
 │                                                                  │
 └────────┼─────────────────────────────────────────────┼───────────┘
