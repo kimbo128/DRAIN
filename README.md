@@ -353,7 +353,7 @@ Features:
 | **Demo Website**        | ✅ **[Live Demo](https://believable-inspiration-production-b1c6.up.railway.app/)** |
 | **Provider Directory**  | ✅ **[Live](https://believable-inspiration-production-b1c6.up.railway.app/directory)** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
-| MCP Server              | 📋 Planned     |
+| **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** |
 | Security Audit          | 📋 Planned     |
 
 ### Deployed Contracts

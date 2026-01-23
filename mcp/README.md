@@ -1,42 +1,68 @@
 # DRAIN MCP Server
 
-Model Context Protocol (MCP) server for autonomous AI payments using the DRAIN protocol.
+> **For AI Agents:** This MCP server lets you pay for AI inference (GPT-4, Claude, etc.) using USDC on Polygon. No API keys needed - you pay per request through payment channels.
 
-Enables AI agents to pay for AI inference without human intervention.
+## What is DRAIN?
+
+DRAIN is a protocol for AI-to-AI payments. Instead of API keys, you:
+1. Open a **payment channel** with a provider (deposit USDC)
+2. Make requests and **sign vouchers** for each payment
+3. Close the channel when done (get unused funds back)
+
+This MCP server handles all of this automatically.
+
+---
+
+## Quick Start for AI Agents
+
+### Prerequisites
+Your wallet needs:
+- **USDC** on Polygon (for payments)
+- **POL** on Polygon (for gas, ~0.1 POL is enough)
+
+### Step-by-Step Workflow
+
+```
+1. CHECK PROVIDERS
+   → drain_providers()
+   Returns list of available AI providers with models and pricing
+
+2. CHECK YOUR BALANCE  
+   → drain_balance()
+   Shows your USDC balance and wallet address
+
+3. APPROVE USDC (first time only)
+   → drain_approve(amount: "100")
+   Allows DRAIN contract to use your USDC
+
+4. OPEN A CHANNEL
+   → drain_open_channel(
+       providerId: "prov_initial_drain",
+       amount: "5.00",      
+       duration: "24h"       
+     )
+   Returns channelId - save this!
+
+5. MAKE REQUESTS
+   → drain_chat(
+       channelId: "0x...",
+       model: "gpt-4o",
+       messages: [{"role": "user", "content": "Hello"}]
+     )
+   Automatically signs payment vouchers
+
+6. CLOSE CHANNEL (after expiry)
+   → drain_close_channel(channelId: "0x...")
+   Returns unused USDC to your wallet
+```
+
+---
 
 ## Installation
 
-```bash
-npm install -g drain-mcp
-```
+### For Cursor IDE
 
-Or run directly with npx:
-
-```bash
-npx drain-mcp
-```
-
-## Configuration
-
-Set the following environment variables:
-
-```bash
-# REQUIRED: Your agent's wallet private key
-export DRAIN_PRIVATE_KEY="0x..."
-
-# OPTIONAL: Network (default: 137 = Polygon Mainnet)
-export DRAIN_CHAIN_ID="137"
-
-# OPTIONAL: Custom RPC URL
-export DRAIN_RPC_URL="https://polygon-rpc.com"
-
-# OPTIONAL: Provider directory URL
-export DRAIN_DIRECTORY_URL="https://drain-marketplace.railway.app/api/mcp/providers"
-```
-
-## Usage with Cursor
-
-Add to your Cursor settings (`~/.cursor/mcp.json`):
+Add to `~/.cursor/mcp.json`:
 
 ```json
 {
@@ -45,16 +71,16 @@ Add to your Cursor settings (`~/.cursor/mcp.json`):
       "command": "npx",
       "args": ["-y", "drain-mcp"],
       "env": {
-        "DRAIN_PRIVATE_KEY": "0x..."
+        "DRAIN_PRIVATE_KEY": "0x_YOUR_PRIVATE_KEY_HERE"
       }
     }
   }
 }
 ```
 
-## Usage with Claude Desktop
+### For Claude Desktop
 
-Add to your Claude config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
@@ -63,114 +89,157 @@ Add to your Claude config (`~/Library/Application Support/Claude/claude_desktop_
       "command": "npx",
       "args": ["-y", "drain-mcp"],
       "env": {
-        "DRAIN_PRIVATE_KEY": "0x..."
+        "DRAIN_PRIVATE_KEY": "0x_YOUR_PRIVATE_KEY_HERE"
       }
     }
   }
 }
 ```
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DRAIN_PRIVATE_KEY` | ✅ Yes | - | Your wallet's private key |
+| `DRAIN_CHAIN_ID` | No | `137` | Polygon Mainnet |
+| `DRAIN_RPC_URL` | No | `https://polygon-rpc.com` | RPC endpoint |
+| `DRAIN_DIRECTORY_URL` | No | Production URL | Provider directory |
+
+---
 
 ## Available Tools
 
-### Discovery
+### 🔍 Discovery
 
-| Tool | Description |
-|------|-------------|
-| `drain_providers` | List available AI providers and their models |
-| `drain_provider_info` | Get details about a specific provider |
+| Tool | Parameters | Description |
+|------|------------|-------------|
+| `drain_providers` | `model?`, `onlineOnly?` | List available AI providers |
+| `drain_provider_info` | `providerId` | Get provider details and pricing |
 
-### Wallet
+### 💰 Wallet
 
-| Tool | Description |
-|------|-------------|
-| `drain_balance` | Check USDC balance and wallet status |
-| `drain_approve` | Approve USDC spending for DRAIN contract |
+| Tool | Parameters | Description |
+|------|------------|-------------|
+| `drain_balance` | - | Check USDC and POL balance |
+| `drain_approve` | `amount?` | Approve USDC for DRAIN contract |
 
-### Channels
+### 📡 Channels
 
-| Tool | Description |
-|------|-------------|
-| `drain_open_channel` | Open a payment channel with a provider |
-| `drain_close_channel` | Close an expired channel and get refund |
-| `drain_channel_status` | Check channel balance and expiry |
+| Tool | Parameters | Description |
+|------|------------|-------------|
+| `drain_open_channel` | `providerId`, `amount`, `duration` | Open payment channel |
+| `drain_close_channel` | `channelId` | Close expired channel, get refund |
+| `drain_channel_status` | `channelId` | Check channel balance and expiry |
 
-### Inference
+### 🤖 Inference
 
-| Tool | Description |
-|------|-------------|
-| `drain_chat` | Send chat completion request with automatic payment |
+| Tool | Parameters | Description |
+|------|------------|-------------|
+| `drain_chat` | `channelId`, `model`, `messages`, `maxTokens?`, `temperature?` | Chat completion with auto-payment |
 
-## Example Workflow
+---
+
+## Example: Complete Session
 
 ```
-Agent: "I need to use GPT-4 for analysis"
+AI Agent wants to analyze code using GPT-4o
 
-1. Check providers:
-   → drain_providers(model: "gpt-4o")
-   
-2. Check balance:
-   → drain_balance()
-   
-3. Approve USDC (if needed):
-   → drain_approve()
-   
-4. Open channel:
-   → drain_open_channel(provider: "drain-official", amount: "5.00", duration: "24h")
-   
-5. Make requests:
-   → drain_chat(channelId: "0x...", model: "gpt-4o", messages: [...])
-   
-6. When done (after expiry):
-   → drain_close_channel(channelId: "0x...")
+Step 1: Find a provider
+> drain_providers(model: "gpt-4o")
+→ Found: "DRAIN Reference Provider" - $0.0075/1k input, $0.0225/1k output
+
+Step 2: Check funds
+> drain_balance()
+→ USDC: $50.00, POL: 2.5
+
+Step 3: Open channel with $5 for 24 hours
+> drain_open_channel(providerId: "prov_initial_drain", amount: "5.00", duration: "24h")
+→ Channel opened: 0x7f8a...3b2c
+
+Step 4: Use the AI
+> drain_chat(channelId: "0x7f8a...3b2c", model: "gpt-4o", messages: [...])
+→ Response received, paid $0.02
+
+Step 5: Continue using...
+> drain_chat(...)
+→ Response received, paid $0.03
+
+Step 6: After 24h, close and get refund
+> drain_close_channel(channelId: "0x7f8a...3b2c")
+→ Refunded: $4.95 USDC
 ```
 
-## Resources
+---
 
-The server also exposes MCP resources:
+## Pricing
 
-| URI | Description |
-|-----|-------------|
-| `drain://wallet` | Current wallet status |
-| `drain://providers` | List of available providers |
+Pricing is set by each provider. Typical rates:
 
-## Funding Your Agent
+| Model | Input/1k tokens | Output/1k tokens |
+|-------|-----------------|------------------|
+| gpt-4o | $0.0075 | $0.0225 |
+| gpt-4o-mini | $0.00015 | $0.0006 |
 
-Before your agent can pay for services, it needs:
+Use `drain_providers()` to see current pricing.
 
-1. **USDC** - For paying AI providers
-2. **POL** - For gas fees on Polygon
+---
 
-Send these tokens to your agent's wallet address (shown when the server starts).
+## Funding Your Wallet
 
-### Getting USDC on Polygon
+Your agent needs USDC and POL on Polygon:
 
-- Bridge from Ethereum: [Polygon Bridge](https://wallet.polygon.technology/bridge)
-- Buy directly: Various exchanges support Polygon USDC
-- Testnet: Use Amoy faucet for testing
+### Get a Wallet
+1. Generate a new private key for your agent
+2. Save it securely - this wallet will hold funds
+
+### Get USDC
+- **Bridge from Ethereum:** [Polygon Bridge](https://wallet.polygon.technology/bridge)
+- **Buy directly:** Coinbase, Binance support Polygon USDC
+- **Circle:** [Circle Mint](https://www.circle.com/en/usdc)
+
+### Get POL (for gas)
+- Most exchanges support Polygon
+- Minimal amount needed (~$0.10 worth)
+
+---
 
 ## Security
 
-- **Never share your private key**
-- Use a dedicated wallet for your agent
-- Consider using spending limits in production
-- Monitor your agent's spending
+⚠️ **Important:**
+- Use a **dedicated wallet** for your agent
+- Never share the private key
+- Start with small amounts
+- Monitor spending via `drain_balance()`
 
-## Development
+---
 
-```bash
-# Clone the repo
-git clone https://github.com/kimbo128/DRAIN.git
-cd DRAIN/mcp
+## Troubleshooting
 
-# Install dependencies
-npm install
+### "Insufficient USDC balance"
+→ Send USDC to your wallet on Polygon network
 
-# Build
-npm run build
+### "Insufficient gas"
+→ Send POL to your wallet for transaction fees
 
-# Run locally
-DRAIN_PRIVATE_KEY="0x..." node dist/index.js
-```
+### "Channel not found"
+→ The channelId might be wrong, use `drain_channel_status()` to verify
+
+### "Channel not expired"
+→ You can only close channels after the duration ends
+
+### "No providers found"
+→ Check your internet connection, try `drain_providers(onlineOnly: false)`
+
+---
+
+## Links
+
+- **NPM:** https://www.npmjs.com/package/drain-mcp
+- **GitHub:** https://github.com/kimbo128/DRAIN
+- **Marketplace:** https://believable-inspiration-production-b1c6.up.railway.app
+- **Contract:** `0x1C1918C99b6DcE977392E4131C91654d8aB71e64` (Polygon)
+
+---
 
 ## License
 
