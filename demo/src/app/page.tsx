@@ -69,6 +69,17 @@ interface Channel {
   claimed: bigint;
   expiry: number;
   spent: bigint; // Local tracking
+  provider?: string;
+}
+
+interface ChannelHistoryItem {
+  id: string;
+  provider: string;
+  deposit: bigint;
+  claimed: bigint;
+  expiry: number;
+  status: 'active' | 'expired' | 'closed';
+  refundable: bigint;
 }
 
 interface Message {
@@ -126,6 +137,11 @@ export default function Home() {
   // Channel state
   const [channel, setChannel] = useState<Channel | null>(null);
   const [voucherNonce, setVoucherNonce] = useState(0);
+  
+  // Channel history
+  const [channelHistory, setChannelHistory] = useState<ChannelHistoryItem[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   
   // Provider/Model state
   const [selectedProvider, setSelectedProvider] = useState(PROVIDERS[0]);
@@ -276,8 +292,182 @@ export default function Home() {
   useEffect(() => {
     if (address && chainId === CHAIN_ID && !demoMode) {
       fetchUSDCBalance(address);
+      fetchChannelHistory(address);
     }
   }, [chainId, address, demoMode]);
+
+  // ============================================================================
+  // CHANNEL HISTORY
+  // ============================================================================
+
+  const fetchChannelHistory = async (userAddress: string) => {
+    setIsLoadingHistory(true);
+    try {
+      // ChannelOpened event topic: keccak256("ChannelOpened(bytes32,address,address,uint256,uint256)")
+      // = 0x506f81b7a67b45bfbc6167fd087b3dd9b65b4531a2380ec406aab5b57ac62152
+      const eventTopic = '0x506f81b7a67b45bfbc6167fd087b3dd9b65b4531a2380ec406aab5b57ac62152';
+      const paddedAddress = '0x' + userAddress.slice(2).toLowerCase().padStart(64, '0');
+      
+      // Query logs for ChannelOpened events where consumer (topic2) is the user
+      const response = await fetch('https://polygon-rpc.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_getLogs',
+          params: [{
+            address: DRAIN_CONTRACT,
+            topics: [eventTopic, null, paddedAddress], // topic0=event, topic1=channelId, topic2=consumer
+            fromBlock: '0x0',
+            toBlock: 'latest',
+          }],
+          id: 1,
+        }),
+      });
+      
+      const json = await response.json();
+      const logs = json.result || [];
+      
+      // Parse each log and check channel status
+      const channels: ChannelHistoryItem[] = [];
+      
+      for (const log of logs) {
+        const channelId = log.topics[1];
+        const provider = '0x' + log.topics[3].slice(26); // Extract provider from topic3
+        
+        // Get current channel state
+        const channelData = await getChannelState(channelId);
+        
+        if (channelData) {
+          const now = Math.floor(Date.now() / 1000);
+          const isExpired = now >= channelData.expiry;
+          const isClosed = channelData.consumer === '0x0000000000000000000000000000000000000000';
+          
+          let status: 'active' | 'expired' | 'closed';
+          if (isClosed) {
+            status = 'closed';
+          } else if (isExpired) {
+            status = 'expired';
+          } else {
+            status = 'active';
+          }
+          
+          channels.push({
+            id: channelId,
+            provider: provider,
+            deposit: channelData.deposit,
+            claimed: channelData.claimed,
+            expiry: channelData.expiry,
+            status,
+            refundable: channelData.deposit - channelData.claimed,
+          });
+        }
+      }
+      
+      // Sort by expiry (newest first)
+      channels.sort((a, b) => b.expiry - a.expiry);
+      
+      setChannelHistory(channels);
+    } catch (e) {
+      console.error('Failed to fetch channel history:', e);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const getChannelState = async (channelId: string): Promise<{
+    consumer: string;
+    provider: string;
+    deposit: bigint;
+    claimed: bigint;
+    expiry: number;
+  } | null> => {
+    try {
+      // getChannel(bytes32) selector: 0x7a7ebd7b
+      const data = '0x7a7ebd7b' + channelId.slice(2);
+      
+      const response = await fetch('https://polygon-rpc.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'eth_call',
+          params: [{ to: DRAIN_CONTRACT, data }, 'latest'],
+          id: 1,
+        }),
+      });
+      
+      const json = await response.json();
+      const result = json.result;
+      
+      if (!result || result === '0x') return null;
+      
+      // Decode tuple: (address consumer, address provider, uint256 deposit, uint256 claimed, uint256 expiry)
+      const consumer = '0x' + result.slice(26, 66);
+      const provider = '0x' + result.slice(90, 130);
+      const deposit = BigInt('0x' + result.slice(130, 194));
+      const claimed = BigInt('0x' + result.slice(194, 258));
+      const expiry = Number(BigInt('0x' + result.slice(258, 322)));
+      
+      return { consumer, provider, deposit, claimed, expiry };
+    } catch (e) {
+      console.error('Failed to get channel state:', e);
+      return null;
+    }
+  };
+
+  const refundChannel = async (channelId: string) => {
+    if (!address || !window.ethereum) return;
+    
+    setIsLoading(true);
+    setStatus('Closing channel and refunding...');
+    
+    try {
+      // close(bytes32)
+      const closeData = '0x39c79e0c' + channelId.slice(2);
+      
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: address,
+          to: DRAIN_CONTRACT,
+          data: closeData,
+        }],
+      }) as string;
+      
+      setStatus('Waiting for confirmation...');
+      
+      // Poll for receipt
+      let receipt = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        receipt = await window.ethereum.request({
+          method: 'eth_getTransactionReceipt',
+          params: [txHash],
+        });
+        if (receipt) break;
+      }
+      
+      // Refresh history and balance
+      await fetchChannelHistory(address);
+      await fetchUSDCBalance(address);
+      
+      setStatus('');
+      alert('Channel closed! Refund sent to your wallet.');
+      
+    } catch (e) {
+      console.error('Failed to refund channel:', e);
+      setStatus('');
+      const error = e as { message?: string; code?: number };
+      if (error.message?.includes('NotExpired') || error.code === -32603) {
+        alert('Channel has not expired yet. Please wait until expiry to claim your refund.');
+      } else {
+        alert('Failed to close channel: ' + (error.message || 'Unknown error'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // ============================================================================
   // CHANNEL FUNCTIONS
@@ -1016,6 +1206,158 @@ export default function Home() {
                 </p>
               )}
             </div>
+            
+            {/* Channel History Section */}
+            {!demoMode && (
+              <div className="mt-6 bg-[#111] border border-[#222] rounded-2xl p-6">
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="w-full flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-bold">Your Channels</h3>
+                    {channelHistory.filter(c => c.status === 'expired').length > 0 && (
+                      <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium animate-pulse">
+                        {channelHistory.filter(c => c.status === 'expired').length} refundable
+                      </span>
+                    )}
+                  </div>
+                  <svg 
+                    className={`w-5 h-5 text-gray-400 transition-transform ${showHistory ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showHistory && (
+                  <div className="mt-4 space-y-3">
+                    {isLoadingHistory ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="animate-spin inline-block w-6 h-6 border-2 border-gray-500 border-t-transparent rounded-full mb-2"></div>
+                        <p className="text-sm">Loading channels...</p>
+                      </div>
+                    ) : channelHistory.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-sm">No channels found</p>
+                        <p className="text-xs mt-1">Open your first channel above!</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Refundable Channels First */}
+                        {channelHistory.filter(c => c.status === 'expired').map(ch => (
+                          <div key={ch.id} className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                <span className="text-sm font-medium text-yellow-400">Expired - Refund Available!</span>
+                              </div>
+                              <span className="text-xs text-gray-500 font-mono">{ch.id.slice(0, 10)}...</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
+                              <div>
+                                <div className="text-gray-500 text-xs">Deposit</div>
+                                <div className="font-mono">${formatUSDC(ch.deposit)}</div>
+                              </div>
+                              <div>
+                                <div className="text-gray-500 text-xs">Refundable</div>
+                                <div className="font-mono text-[#00D395]">${formatUSDC(ch.refundable)}</div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 mb-3">
+                              Expired: {new Date(ch.expiry * 1000).toLocaleString()}
+                            </div>
+                            <button
+                              onClick={() => refundChannel(ch.id)}
+                              disabled={isLoading}
+                              className="w-full py-2 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-700 text-black font-semibold rounded-lg transition"
+                            >
+                              {isLoading ? 'Processing...' : `Claim $${formatUSDC(ch.refundable)} Refund`}
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Active Channels */}
+                        {channelHistory.filter(c => c.status === 'active').map(ch => {
+                          const now = Math.floor(Date.now() / 1000);
+                          const remaining = ch.expiry - now;
+                          const hours = Math.floor(remaining / 3600);
+                          const minutes = Math.floor((remaining % 3600) / 60);
+                          
+                          return (
+                            <div key={ch.id} className="bg-[#0a0a0a] border border-[#333] rounded-xl p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-[#00D395] animate-pulse"></span>
+                                  <span className="text-sm font-medium">Active</span>
+                                </div>
+                                <span className="text-xs text-gray-500 font-mono">{ch.id.slice(0, 10)}...</span>
+                              </div>
+                              <div className="grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <div className="text-gray-500 text-xs">Deposit</div>
+                                  <div className="font-mono">${formatUSDC(ch.deposit)}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500 text-xs">Used</div>
+                                  <div className="font-mono text-[#7B61FF]">${formatUSDC(ch.claimed)}</div>
+                                </div>
+                                <div>
+                                  <div className="text-gray-500 text-xs">Expires in</div>
+                                  <div className="font-mono">{hours}h {minutes}m</div>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setChannel({
+                                    id: ch.id,
+                                    deposit: ch.deposit,
+                                    claimed: ch.claimed,
+                                    expiry: ch.expiry,
+                                    spent: ch.claimed,
+                                    provider: ch.provider,
+                                  });
+                                  setMessages([{
+                                    role: 'system',
+                                    content: `📡 Reconnected to channel ${ch.id.slice(0, 10)}...\n\nRemaining: $${formatUSDC(ch.deposit - ch.claimed)} USDC\nExpires: ${new Date(ch.expiry * 1000).toLocaleString()}`
+                                  }]);
+                                }}
+                                className="w-full mt-3 py-2 bg-[#00D395]/20 hover:bg-[#00D395]/30 text-[#00D395] font-medium rounded-lg transition text-sm"
+                              >
+                                Continue Using This Channel
+                              </button>
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Closed Channels */}
+                        {channelHistory.filter(c => c.status === 'closed').length > 0 && (
+                          <div className="pt-4 border-t border-[#222]">
+                            <div className="text-xs text-gray-500 mb-2">Closed Channels</div>
+                            {channelHistory.filter(c => c.status === 'closed').slice(0, 3).map(ch => (
+                              <div key={ch.id} className="flex items-center justify-between py-2 text-sm text-gray-500">
+                                <span className="font-mono">{ch.id.slice(0, 10)}...</span>
+                                <span>${formatUSDC(ch.deposit)} deposit</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    <button
+                      onClick={() => address && fetchChannelHistory(address)}
+                      disabled={isLoadingHistory}
+                      className="w-full py-2 bg-[#1a1a1a] hover:bg-[#222] text-gray-400 rounded-lg text-sm transition"
+                    >
+                      {isLoadingHistory ? 'Loading...' : '↻ Refresh'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1031,13 +1373,61 @@ export default function Home() {
                   <span className="px-2 py-0.5 bg-[#7B61FF]/20 text-[#7B61FF] rounded text-xs font-medium">
                     {selectedModel.name}
                   </span>
-                  <button
-                    onClick={demoMode ? () => { setChannel(null); setMessages([]); } : closeChannel}
-                    disabled={isLoading}
-                    className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition"
-                  >
-                    Close
-                  </button>
+                  {/* Expiry Timer */}
+                  {!demoMode && (() => {
+                    const now = Math.floor(Date.now() / 1000);
+                    const remaining = channel.expiry - now;
+                    const isExpired = remaining <= 0;
+                    const hours = Math.floor(Math.abs(remaining) / 3600);
+                    const minutes = Math.floor((Math.abs(remaining) % 3600) / 60);
+                    
+                    return (
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        isExpired 
+                          ? 'bg-yellow-500/20 text-yellow-400' 
+                          : 'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {isExpired ? '⏰ Expired' : `⏱️ ${hours}h ${minutes}m left`}
+                      </span>
+                    );
+                  })()}
+                  {/* Close/Refund Button */}
+                  {demoMode ? (
+                    <button
+                      onClick={() => { setChannel(null); setMessages([]); }}
+                      disabled={isLoading}
+                      className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs font-medium transition"
+                    >
+                      Close Demo
+                    </button>
+                  ) : (() => {
+                    const now = Math.floor(Date.now() / 1000);
+                    const isExpired = now >= channel.expiry;
+                    
+                    return isExpired ? (
+                      <button
+                        onClick={closeChannel}
+                        disabled={isLoading}
+                        className="px-3 py-1 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg text-xs font-semibold transition"
+                      >
+                        Claim Refund (${formatUSDC(remaining)})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setChannel(null);
+                          setMessages([]);
+                          setVoucherNonce(0);
+                          setPreSignedVouchers([]);
+                          setUsedVoucherIndex(0);
+                        }}
+                        className="px-3 py-1 bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 rounded-lg text-xs font-medium transition"
+                        title="Channel will remain open. Return later to claim refund after expiry."
+                      >
+                        Exit (keep channel)
+                      </button>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-6 font-mono text-sm">
                   <div className="text-center">
@@ -1135,8 +1525,8 @@ export default function Home() {
                       <p className="text-xs text-yellow-400">
                         💡 <strong>Tip:</strong> Click "Sign {preSignCount}" to pre-authorize {preSignCount} messages. 
                         You'll sign once, then chat without MetaMask popups!
-                      </p>
-                    </div>
+          </p>
+        </div>
                   )}
                 </div>
               )}
