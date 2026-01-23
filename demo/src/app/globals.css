@@ -23,20 +23,20 @@
   --secondary: #00ccff;
   --accent: #ff00ff;
   
-  /* Backgrounds */
-  --bg-dark: #0a0a0f;
-  --bg-card: #0d0d14;
-  --bg-elevated: #12121a;
-  --bg-hover: #1a1a24;
+  /* Backgrounds - slightly lighter for better contrast */
+  --bg-dark: #0c0c12;
+  --bg-card: #111118;
+  --bg-elevated: #181820;
+  --bg-hover: #22222e;
   
-  /* Borders */
-  --border: #1e1e2e;
-  --border-bright: #2a2a3e;
+  /* Borders - more visible */
+  --border: #2a2a3e;
+  --border-bright: #3a3a50;
   
-  /* Text */
-  --text-primary: #e0e0e0;
-  --text-secondary: #888899;
-  --text-muted: #555566;
+  /* Text - higher contrast */
+  --text-primary: #f0f0f5;
+  --text-secondary: #a0a0b0;
+  --text-muted: #707080;
   
   /* Glow */
   --glow-primary: 0 0 20px rgba(0, 255, 159, 0.3), 0 0 40px rgba(0, 255, 159, 0.1);

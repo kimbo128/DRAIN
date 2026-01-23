@@ -132,7 +132,7 @@ export default function AdminPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] text-[#e0e0e0] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0c0c12] text-[#f0f0f5] flex items-center justify-center">
         <div className="terminal-card w-full max-w-md">
           <div className="terminal-header">
             <div className="terminal-dots">
@@ -140,7 +140,7 @@ export default function AdminPage() {
               <div className="terminal-dot yellow"></div>
               <div className="terminal-dot green"></div>
             </div>
-            <span className="font-mono text-xs text-[#555566]">admin.auth()</span>
+            <span className="font-mono text-xs text-[#707080]">admin.auth()</span>
           </div>
           
           <div className="p-6">
@@ -155,7 +155,7 @@ export default function AdminPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && authenticate()}
                 placeholder="password"
-                className="flex-1 bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 font-mono text-sm outline-none focus:border-[#00ff9f]"
+                className="flex-1 bg-[#0c0c12] border border-[#2a2a3e] rounded px-3 py-2 font-mono text-sm outline-none focus:border-[#00ff9f]"
               />
               <button
                 onClick={authenticate}
@@ -172,9 +172,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#e0e0e0] bg-grid noise">
+    <div className="min-h-screen bg-[#0c0c12] text-[#f0f0f5] bg-grid noise">
       {/* Header */}
-      <header className="border-b border-[#1e1e2e] sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-sm z-50">
+      <header className="border-b border-[#2a2a3e] sticky top-0 bg-[#0c0c12]/95 backdrop-blur-sm z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="terminal-dots hidden sm:flex">
@@ -204,7 +204,7 @@ export default function AdminPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'total', value: counts.total, color: '#e0e0e0' },
+            { label: 'total', value: counts.total, color: '#f0f0f5' },
             { label: 'pending', value: counts.pending, color: '#ffff00' },
             { label: 'approved', value: counts.approved, color: '#00ff9f' },
             { label: 'rejected', value: counts.rejected, color: '#ff4444' },
@@ -214,7 +214,7 @@ export default function AdminPage() {
                 <div className="text-3xl font-bold font-mono" style={{ color: stat.color }}>
                   {stat.value}
                 </div>
-                <div className="text-[10px] text-[#555566] font-mono uppercase tracking-wider">
+                <div className="text-[10px] text-[#707080] font-mono uppercase tracking-wider">
                   {stat.label}
                 </div>
               </div>
@@ -229,7 +229,7 @@ export default function AdminPage() {
             className={`px-4 py-2 rounded font-mono text-xs transition ${
               filter === 'pending'
                 ? 'bg-[#ffff00]/10 text-[#ffff00] border border-[#ffff00]/30'
-                : 'bg-[#0d0d14] text-[#888899] border border-[#1e1e2e]'
+                : 'bg-[#111118] text-[#a0a0b0] border border-[#2a2a3e]'
             }`}
           >
             PENDING ({counts.pending})
@@ -239,7 +239,7 @@ export default function AdminPage() {
             className={`px-4 py-2 rounded font-mono text-xs transition ${
               filter === 'all'
                 ? 'bg-[#00ccff]/10 text-[#00ccff] border border-[#00ccff]/30'
-                : 'bg-[#0d0d14] text-[#888899] border border-[#1e1e2e]'
+                : 'bg-[#111118] text-[#a0a0b0] border border-[#2a2a3e]'
             }`}
           >
             ALL ({counts.total})
@@ -247,7 +247,7 @@ export default function AdminPage() {
           <button
             onClick={() => performAction('health-check-all', '')}
             disabled={loading}
-            className="ml-auto px-4 py-2 bg-[#0d0d14] text-[#888899] border border-[#1e1e2e] rounded font-mono text-xs hover:text-[#00ff9f] hover:border-[#00ff9f]/30 transition"
+            className="ml-auto px-4 py-2 bg-[#111118] text-[#a0a0b0] border border-[#2a2a3e] rounded font-mono text-xs hover:text-[#00ff9f] hover:border-[#00ff9f]/30 transition"
           >
             🔄 HEALTH_CHECK_ALL
           </button>
@@ -256,7 +256,7 @@ export default function AdminPage() {
         {/* Provider List */}
         <div className="space-y-4">
           {providers.length === 0 ? (
-            <div className="text-center py-12 font-mono text-[#555566]">
+            <div className="text-center py-12 font-mono text-[#707080]">
               // no {filter === 'pending' ? 'pending' : ''} providers
             </div>
           ) : (
@@ -269,7 +269,7 @@ export default function AdminPage() {
                       <div className="terminal-dot yellow"></div>
                       <div className="terminal-dot green"></div>
                     </div>
-                    <span className="font-mono text-xs text-[#555566]">{provider.id}</span>
+                    <span className="font-mono text-xs text-[#707080]">{provider.id}</span>
                     {provider.isPremium && (
                       <span className="px-2 py-0.5 bg-[#ffff00]/20 text-[#ffff00] border border-[#ffff00]/30 rounded text-[10px] font-mono">
                         ⭐ PREMIUM
@@ -296,36 +296,36 @@ export default function AdminPage() {
                 </div>
                 
                 <div className="p-4">
-                  <h3 className="font-bold text-[#e0e0e0] text-lg mb-2">{provider.name}</h3>
+                  <h3 className="font-bold text-[#f0f0f5] text-lg mb-2">{provider.name}</h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono mb-4">
                     <div>
-                      <div className="text-[#555566]">api_url</div>
+                      <div className="text-[#707080]">api_url</div>
                       <div className="text-[#00ccff] truncate" title={provider.apiUrl}>{provider.apiUrl}</div>
                     </div>
                     <div>
-                      <div className="text-[#555566]">address</div>
-                      <div className="text-[#e0e0e0]">{provider.providerAddress.slice(0, 14)}...</div>
+                      <div className="text-[#707080]">address</div>
+                      <div className="text-[#f0f0f5]">{provider.providerAddress.slice(0, 14)}...</div>
                     </div>
                     <div>
-                      <div className="text-[#555566]">email</div>
-                      <div className="text-[#e0e0e0]">{provider.contactEmail}</div>
+                      <div className="text-[#707080]">email</div>
+                      <div className="text-[#f0f0f5]">{provider.contactEmail}</div>
                     </div>
                     <div>
-                      <div className="text-[#555566]">submitted</div>
-                      <div className="text-[#e0e0e0]">{new Date(provider.submittedAt).toLocaleDateString()}</div>
+                      <div className="text-[#707080]">submitted</div>
+                      <div className="text-[#f0f0f5]">{new Date(provider.submittedAt).toLocaleDateString()}</div>
                     </div>
                   </div>
                   
-                  <p className="text-sm text-[#888899] mb-4">{provider.description}</p>
+                  <p className="text-sm text-[#a0a0b0] mb-4">{provider.description}</p>
                   
                   {/* Models */}
                   {provider.models.length > 0 && (
                     <div className="mb-4">
-                      <div className="text-[10px] text-[#555566] mb-2 font-mono">// models</div>
+                      <div className="text-[10px] text-[#707080] mb-2 font-mono">// models</div>
                       <div className="flex flex-wrap gap-2">
                         {provider.models.map((m) => (
-                          <span key={m.id} className="px-2 py-1 bg-[#0d0d14] border border-[#1e1e2e] rounded text-xs font-mono text-[#00ccff]">
+                          <span key={m.id} className="px-2 py-1 bg-[#111118] border border-[#2a2a3e] rounded text-xs font-mono text-[#00ccff]">
                             {m.name}
                           </span>
                         ))}
@@ -348,7 +348,7 @@ export default function AdminPage() {
                     <button
                       onClick={() => performAction('test', provider.id)}
                       disabled={loading}
-                      className="px-3 py-1.5 bg-[#0d0d14] border border-[#1e1e2e] rounded text-xs font-mono text-[#888899] hover:text-[#00ccff] hover:border-[#00ccff]/30 transition"
+                      className="px-3 py-1.5 bg-[#111118] border border-[#2a2a3e] rounded text-xs font-mono text-[#a0a0b0] hover:text-[#00ccff] hover:border-[#00ccff]/30 transition"
                     >
                       🔄 TEST
                     </button>
@@ -382,7 +382,7 @@ export default function AdminPage() {
                         className={`px-3 py-1.5 rounded text-xs font-mono transition ${
                           provider.isPremium
                             ? 'bg-[#ffff00]/20 border border-[#ffff00]/50 text-[#ffff00] hover:bg-[#ffff00]/30'
-                            : 'bg-[#0d0d14] border border-[#1e1e2e] text-[#888899] hover:text-[#ffff00] hover:border-[#ffff00]/30'
+                            : 'bg-[#111118] border border-[#2a2a3e] text-[#a0a0b0] hover:text-[#ffff00] hover:border-[#ffff00]/30'
                         }`}
                       >
                         {provider.isPremium ? '⭐ REMOVE_PREMIUM' : '⭐ MAKE_PREMIUM'}
@@ -396,7 +396,7 @@ export default function AdminPage() {
                         }
                       }}
                       disabled={loading}
-                      className="px-3 py-1.5 bg-[#0d0d14] border border-[#1e1e2e] rounded text-xs font-mono text-[#555566] hover:text-[#ff4444] hover:border-[#ff4444]/30 transition ml-auto"
+                      className="px-3 py-1.5 bg-[#111118] border border-[#2a2a3e] rounded text-xs font-mono text-[#707080] hover:text-[#ff4444] hover:border-[#ff4444]/30 transition ml-auto"
                     >
                       🗑️ DELETE
                     </button>

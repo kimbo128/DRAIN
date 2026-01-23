@@ -138,7 +138,7 @@ function ExpiryBadge({ expiry }: { expiry: number }) {
     <span className={`px-2 py-0.5 rounded font-mono text-[10px] border ${
       isExpired 
         ? 'bg-[#ffff00]/10 text-[#ffff00] border-[#ffff00]/30' 
-        : 'bg-[#0d0d14] text-[#888899] border-[#1e1e2e]'
+        : 'bg-[#111118] text-[#a0a0b0] border-[#2a2a3e]'
     }`}>
       {isExpired ? 'TTL:EXPIRED' : `TTL:${hours}h${minutes}m`}
     </span>
@@ -176,7 +176,7 @@ function ChannelActionButton({
   return (
     <button
       onClick={onExit}
-      className="px-3 py-1 bg-[#1e1e2e] hover:bg-[#2a2a3e] text-[#888899] hover:text-[#e0e0e0] rounded font-mono text-[10px] transition border border-[#1e1e2e]"
+      className="px-3 py-1 bg-[#22222e] hover:bg-[#2a2a3e] text-[#a0a0b0] hover:text-[#f0f0f5] rounded font-mono text-[10px] transition border border-[#2a2a3e]"
       title="Channel will remain open. Return later to claim refund after expiry."
     >
       EXIT_SESSION
@@ -1072,9 +1072,9 @@ export default function Home() {
   const remaining = channel ? channel.deposit - channel.spent : 0n;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#e0e0e0] bg-grid noise">
+    <div className="min-h-screen bg-[#0c0c12] text-[#f0f0f5] bg-grid noise">
       {/* Header - Terminal Style */}
-      <header className="border-b border-[#1e1e2e] sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-sm z-50">
+      <header className="border-b border-[#2a2a3e] sticky top-0 bg-[#0c0c12]/95 backdrop-blur-sm z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Terminal dots */}
@@ -1087,7 +1087,7 @@ export default function Home() {
               <span className="text-xl font-bold font-mono gradient-text tracking-wider">
                 DRAIN
               </span>
-              <span className="text-[10px] text-[#555566] hidden sm:inline font-mono uppercase tracking-widest">
+              <span className="text-[10px] text-[#707080] hidden sm:inline font-mono uppercase tracking-widest">
                 // payment_layer
               </span>
             </div>
@@ -1097,7 +1097,7 @@ export default function Home() {
             {address ? (
               <>
                 {demoMode && (
-                  <span className="px-2 py-0.5 bg-[#555566]/20 text-[#888899] rounded text-[10px] font-mono">
+                  <span className="px-2 py-0.5 bg-[#707080]/20 text-[#a0a0b0] rounded text-[10px] font-mono">
                     test
                   </span>
                 )}
@@ -1110,7 +1110,7 @@ export default function Home() {
                   </button>
                 )}
                 {isPolygon && !demoMode && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d0d14] border border-[#1e1e2e] rounded">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-[#111118] border border-[#2a2a3e] rounded">
                     <span className="status-dot online"></span>
                     <span className="text-xs font-mono text-[#00ff9f]">
                       ${formatUSDC(usdcBalance)}
@@ -1118,12 +1118,12 @@ export default function Home() {
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <div className="px-3 py-1.5 bg-[#0d0d14] rounded border border-[#1e1e2e] font-mono text-xs text-[#00ccff]">
+                  <div className="px-3 py-1.5 bg-[#111118] rounded border border-[#2a2a3e] font-mono text-xs text-[#00ccff]">
                     {shortAddress}
                   </div>
                   <button
                     onClick={disconnectWallet}
-                    className="p-2 hover:bg-[#1a1a24] rounded transition text-[#555566] hover:text-[#ff4444] border border-transparent hover:border-[#ff4444]/30"
+                    className="p-2 hover:bg-[#22222e] rounded transition text-[#707080] hover:text-[#ff4444] border border-transparent hover:border-[#ff4444]/30"
                     title="Disconnect"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1136,7 +1136,7 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   onClick={startDemoMode}
-                  className="px-3 py-1.5 text-[#555566] hover:text-[#888899] font-mono text-[10px] transition"
+                  className="px-3 py-1.5 text-[#707080] hover:text-[#a0a0b0] font-mono text-[10px] transition"
                   title="Try without wallet"
                 >
                   test_mode
@@ -1177,29 +1177,29 @@ export default function Home() {
                   <div className="terminal-dot yellow"></div>
                   <div className="terminal-dot green"></div>
                 </div>
-                <span className="font-mono text-xs text-[#555566]">drain_protocol.init()</span>
+                <span className="font-mono text-xs text-[#707080]">drain_protocol.init()</span>
               </div>
               
               <div className="p-6 space-y-4 font-mono text-sm">
-                <div className="text-[#555566]">
+                <div className="text-[#707080]">
                   <span className="text-[#00ccff]">$</span> initializing payment layer...
                 </div>
                 <div>
-                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#888899]">protocol:</span> <span className="text-[#e0e0e0]">DRAIN v1.0</span>
+                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#a0a0b0]">protocol:</span> <span className="text-[#f0f0f5]">DRAIN v1.0</span>
                 </div>
                 <div>
-                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#888899]">network:</span> <span className="text-[#e0e0e0]">Polygon Mainnet</span>
+                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#a0a0b0]">network:</span> <span className="text-[#f0f0f5]">Polygon Mainnet</span>
                 </div>
                 <div>
-                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#888899]">currency:</span> <span className="text-[#e0e0e0]">USDC</span>
+                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#a0a0b0]">currency:</span> <span className="text-[#f0f0f5]">USDC</span>
                 </div>
                 <div>
-                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#888899]">tx_cost:</span> <span className="text-[#e0e0e0]">~$0.02</span>
+                  <span className="text-[#00ff9f]">✓</span> <span className="text-[#a0a0b0]">tx_cost:</span> <span className="text-[#f0f0f5]">~$0.02</span>
                 </div>
-                <div className="pt-4 border-t border-[#1e1e2e]">
-                  <span className="text-[#ffff00]">⚡</span> <span className="text-[#888899]">status:</span> <span className="text-[#00ff9f]">ready</span>
+                <div className="pt-4 border-t border-[#2a2a3e]">
+                  <span className="text-[#ffff00]">⚡</span> <span className="text-[#a0a0b0]">status:</span> <span className="text-[#00ff9f]">ready</span>
                 </div>
-                <div className="text-[#555566]">
+                <div className="text-[#707080]">
                   <span className="text-[#00ccff]">$</span> awaiting wallet connection<span className="cursor-blink"></span>
                 </div>
               </div>
@@ -1214,13 +1214,13 @@ export default function Home() {
               </button>
               <button
                 onClick={startDemoMode}
-                className="text-[#555566] hover:text-[#888899] font-mono text-xs transition"
+                className="text-[#707080] hover:text-[#a0a0b0] font-mono text-xs transition"
               >
                 or try without wallet →
               </button>
             </div>
             
-            <p className="text-center text-[#555566] text-xs font-mono mt-6 max-w-md mx-auto">
+            <p className="text-center text-[#707080] text-xs font-mono mt-6 max-w-md mx-auto">
               // trustless micropayments for autonomous AI agents
             </p>
           </div>
@@ -1236,21 +1236,21 @@ export default function Home() {
                   <div className="terminal-dot yellow"></div>
                   <div className="terminal-dot green"></div>
                 </div>
-                <span className="font-mono text-xs text-[#555566]">channel.open()</span>
+                <span className="font-mono text-xs text-[#707080]">channel.open()</span>
               </div>
               
               <div className="p-6">
-                <div className="font-mono text-xs text-[#555566] mb-4">
+                <div className="font-mono text-xs text-[#707080] mb-4">
                   // deposit USDC to initialize payment channel
                 </div>
               
                 <div className="space-y-6 mb-6">
                   {/* Amount Display */}
-                  <div className="text-center py-4 bg-[#0a0a0f] rounded-lg border border-[#1e1e2e]">
+                  <div className="text-center py-4 bg-[#0c0c12] rounded-lg border border-[#2a2a3e]">
                     <div className="text-4xl font-mono font-bold text-[#00ff9f] mb-1 text-glow-green">
                       ${parseFloat(depositAmount) || 0}
                     </div>
-                    <div className="text-[#555566] text-xs font-mono uppercase tracking-wider">USDC_DEPOSIT</div>
+                    <div className="text-[#707080] text-xs font-mono uppercase tracking-wider">USDC_DEPOSIT</div>
                   </div>
                   
                   {/* Slider */}
@@ -1268,7 +1268,7 @@ export default function Home() {
                       className="w-full"
                       autoComplete="off"
                     />
-                    <div className="flex justify-between text-xs text-[#555566] font-mono">
+                    <div className="flex justify-between text-xs text-[#707080] font-mono">
                       <span>${MIN_DEPOSIT}</span>
                       <span>${MAX_DEPOSIT}</span>
                     </div>
@@ -1283,7 +1283,7 @@ export default function Home() {
                         className={`flex-1 py-2 rounded text-xs font-mono transition border ${
                           depositAmount === amt 
                             ? 'bg-[#00ff9f]/10 text-[#00ff9f] border-[#00ff9f]/50' 
-                            : 'bg-[#0d0d14] text-[#888899] border-[#1e1e2e] hover:border-[#00ff9f]/30'
+                            : 'bg-[#111118] text-[#a0a0b0] border-[#2a2a3e] hover:border-[#00ff9f]/30'
                         }`}
                       >
                         ${amt}
@@ -1295,8 +1295,8 @@ export default function Home() {
               {/* Provider & Model Selection */}
               <div className="space-y-3 mb-6">
                 {/* Provider Selection */}
-                <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg p-3">
-                  <label htmlFor="provider-select" className="text-[10px] text-[#555566] block mb-2 font-mono uppercase tracking-wider">PROVIDER</label>
+                <div className="bg-[#0c0c12] border border-[#2a2a3e] rounded-lg p-3">
+                  <label htmlFor="provider-select" className="text-[10px] text-[#707080] block mb-2 font-mono uppercase tracking-wider">PROVIDER</label>
                   <select
                     id="provider-select"
                     name="provider-select"
@@ -1306,7 +1306,7 @@ export default function Home() {
                       setSelectedProvider(provider);
                       setSelectedModel(provider.models[0]);
                     }}
-                    className="w-full bg-[#0d0d14] border border-[#1e1e2e] rounded px-3 py-2 text-[#e0e0e0] font-mono text-sm outline-none focus:border-[#00ff9f]"
+                    className="w-full bg-[#111118] border border-[#2a2a3e] rounded px-3 py-2 text-[#f0f0f5] font-mono text-sm outline-none focus:border-[#00ff9f]"
                   >
                     {PROVIDERS.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
@@ -1315,8 +1315,8 @@ export default function Home() {
                 </div>
                 
                 {/* Model Selection */}
-                <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg p-3">
-                  <label className="text-[10px] text-[#555566] block mb-2 font-mono uppercase tracking-wider">MODEL</label>
+                <div className="bg-[#0c0c12] border border-[#2a2a3e] rounded-lg p-3">
+                  <label className="text-[10px] text-[#707080] block mb-2 font-mono uppercase tracking-wider">MODEL</label>
                   <div className="grid grid-cols-2 gap-2">
                     {selectedProvider.models.map(model => (
                       <button
@@ -1325,7 +1325,7 @@ export default function Home() {
                         className={`p-3 rounded text-left transition font-mono border ${
                           selectedModel.id === model.id
                             ? 'bg-[#00ff9f]/10 border-[#00ff9f]/50 text-[#00ff9f]'
-                            : 'bg-[#0d0d14] border-[#1e1e2e] text-[#888899] hover:border-[#00ff9f]/30'
+                            : 'bg-[#111118] border-[#2a2a3e] text-[#a0a0b0] hover:border-[#00ff9f]/30'
                         }`}
                       >
                         <div className="text-xs font-medium">{model.name}</div>
@@ -1337,8 +1337,8 @@ export default function Home() {
               </div>
 
               {/* Data Display - Terminal Style */}
-              <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg p-4 mb-6 font-mono text-sm">
-                <div className="text-[10px] text-[#555566] mb-3 uppercase tracking-wider">// estimates</div>
+              <div className="bg-[#0c0c12] border border-[#2a2a3e] rounded-lg p-4 mb-6 font-mono text-sm">
+                <div className="text-[10px] text-[#707080] mb-3 uppercase tracking-wider">// estimates</div>
                 <div className="space-y-2">
                   <div className="data-row">
                     <span className="data-label">messages</span>
@@ -1398,7 +1398,7 @@ export default function Home() {
                       <div className="terminal-dot yellow"></div>
                       <div className="terminal-dot green"></div>
                     </div>
-                    <span className="font-mono text-xs text-[#555566]">channels.history()</span>
+                    <span className="font-mono text-xs text-[#707080]">channels.history()</span>
                   </div>
                   {channelHistory.filter(c => c.status === 'expired').length > 0 && (
                     <span className="px-2 py-0.5 bg-[#ffff00]/10 text-[#ffff00] border border-[#ffff00]/30 rounded text-[10px] font-mono animate-pulse">
@@ -1409,13 +1409,13 @@ export default function Home() {
                 
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  className="w-full p-3 flex items-center justify-between text-left hover:bg-[#1a1a24] transition"
+                  className="w-full p-3 flex items-center justify-between text-left hover:bg-[#22222e] transition"
                 >
-                  <span className="font-mono text-sm text-[#888899]">
+                  <span className="font-mono text-sm text-[#a0a0b0]">
                     {channelHistory.length} channel(s) found
                   </span>
                   <svg 
-                    className={`w-4 h-4 text-[#555566] transition-transform ${showHistory ? 'rotate-180' : ''}`} 
+                    className={`w-4 h-4 text-[#707080] transition-transform ${showHistory ? 'rotate-180' : ''}`} 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -1425,13 +1425,13 @@ export default function Home() {
                 </button>
                 
                 {showHistory && (
-                  <div className="p-4 space-y-3 border-t border-[#1e1e2e]">
+                  <div className="p-4 space-y-3 border-t border-[#2a2a3e]">
                     {isLoadingHistory ? (
                       <div className="text-center py-6 font-mono text-sm">
                         <div className="text-[#00ff9f] animate-pulse">⏳ fetching_channels...</div>
                       </div>
                     ) : channelHistory.length === 0 ? (
-                      <div className="text-center py-6 font-mono text-sm text-[#555566]">
+                      <div className="text-center py-6 font-mono text-sm text-[#707080]">
                         <div>// no channels found</div>
                         <div className="mt-1 text-[10px]">open your first channel above</div>
                       </div>
@@ -1445,7 +1445,7 @@ export default function Home() {
                                 <span className="status-dot warning"></span>
                                 <span className="text-xs text-[#ffff00]">EXPIRED // refund_available</span>
                               </div>
-                              <span className="text-[10px] text-[#555566]">{ch.id.slice(0, 10)}...</span>
+                              <span className="text-[10px] text-[#707080]">{ch.id.slice(0, 10)}...</span>
                             </div>
                             <div className="space-y-1 mb-3 text-xs">
                               <div className="data-row">
@@ -1458,13 +1458,13 @@ export default function Home() {
                               </div>
                               <div className="data-row">
                                 <span className="data-label">expired</span>
-                                <span className="data-value text-[#888899]">{new Date(ch.expiry * 1000).toLocaleString()}</span>
+                                <span className="data-value text-[#a0a0b0]">{new Date(ch.expiry * 1000).toLocaleString()}</span>
                               </div>
                             </div>
                             <button
                               onClick={() => refundChannel(ch.id)}
                               disabled={isLoading}
-                              className="w-full py-2 bg-[#ffff00] hover:bg-[#cccc00] disabled:bg-[#1e1e2e] text-black font-semibold rounded text-xs transition"
+                              className="w-full py-2 bg-[#ffff00] hover:bg-[#cccc00] disabled:bg-[#2a2a3e] text-black font-semibold rounded text-xs transition"
                             >
                               {isLoading ? 'PROCESSING...' : `CLAIM_REFUND($${formatUSDC(ch.refundable)})`}
                             </button>
@@ -1479,26 +1479,26 @@ export default function Home() {
                           const minutes = Math.floor((remaining % 3600) / 60);
                           
                           return (
-                            <div key={ch.id} className="bg-[#0a0a0f] border border-[#1e1e2e] rounded p-4 font-mono">
+                            <div key={ch.id} className="bg-[#0c0c12] border border-[#2a2a3e] rounded p-4 font-mono">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
                                   <span className="status-dot online"></span>
                                   <span className="text-xs text-[#00ff9f]">ACTIVE</span>
                                 </div>
-                                <span className="text-[10px] text-[#555566]">{ch.id.slice(0, 10)}...</span>
+                                <span className="text-[10px] text-[#707080]">{ch.id.slice(0, 10)}...</span>
                               </div>
                               <div className="grid grid-cols-3 gap-3 text-xs">
                                 <div>
-                                  <div className="text-[#555566] text-[10px] uppercase">deposit</div>
-                                  <div className="text-[#e0e0e0]">${formatUSDC(ch.deposit)}</div>
+                                  <div className="text-[#707080] text-[10px] uppercase">deposit</div>
+                                  <div className="text-[#f0f0f5]">${formatUSDC(ch.deposit)}</div>
                                 </div>
                                 <div>
-                                  <div className="text-[#555566] text-[10px] uppercase">used</div>
+                                  <div className="text-[#707080] text-[10px] uppercase">used</div>
                                   <div className="text-[#ff00ff]">${formatUSDC(ch.claimed)}</div>
                                 </div>
                                 <div>
-                                  <div className="text-[#555566] text-[10px] uppercase">ttl</div>
-                                  <div className="text-[#e0e0e0]">{hours}h {minutes}m</div>
+                                  <div className="text-[#707080] text-[10px] uppercase">ttl</div>
+                                  <div className="text-[#f0f0f5]">{hours}h {minutes}m</div>
                                 </div>
                               </div>
                               <button
@@ -1526,10 +1526,10 @@ export default function Home() {
                         
                         {/* Closed Channels */}
                         {channelHistory.filter(c => c.status === 'closed').length > 0 && (
-                          <div className="pt-3 border-t border-[#1e1e2e]">
-                            <div className="text-[10px] text-[#555566] mb-2 font-mono uppercase tracking-wider">// closed</div>
+                          <div className="pt-3 border-t border-[#2a2a3e]">
+                            <div className="text-[10px] text-[#707080] mb-2 font-mono uppercase tracking-wider">// closed</div>
                             {channelHistory.filter(c => c.status === 'closed').slice(0, 3).map(ch => (
-                              <div key={ch.id} className="flex items-center justify-between py-2 text-xs text-[#555566] font-mono">
+                              <div key={ch.id} className="flex items-center justify-between py-2 text-xs text-[#707080] font-mono">
                                 <span>{ch.id.slice(0, 10)}...</span>
                                 <span>${formatUSDC(ch.deposit)}</span>
                               </div>
@@ -1542,7 +1542,7 @@ export default function Home() {
                     <button
                       onClick={() => address && fetchChannelHistory(address)}
                       disabled={isLoadingHistory}
-                      className="w-full py-2 bg-[#0d0d14] hover:bg-[#1a1a24] text-[#555566] hover:text-[#00ccff] border border-[#1e1e2e] rounded text-xs font-mono transition"
+                      className="w-full py-2 bg-[#111118] hover:bg-[#22222e] text-[#707080] hover:text-[#00ccff] border border-[#2a2a3e] rounded text-xs font-mono transition"
                     >
                       {isLoadingHistory ? 'LOADING...' : '↻ REFRESH'}
                     </button>
@@ -1565,7 +1565,7 @@ export default function Home() {
                     <div className="terminal-dot yellow"></div>
                     <div className="terminal-dot green"></div>
                   </div>
-                  <span className="font-mono text-xs text-[#555566]">session.active()</span>
+                  <span className="font-mono text-xs text-[#707080]">session.active()</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="status-dot online"></span>
@@ -1576,7 +1576,7 @@ export default function Home() {
               <div className="p-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3 flex-wrap font-mono text-xs">
-                    <span className="text-[#888899]">{selectedProvider.name}</span>
+                    <span className="text-[#a0a0b0]">{selectedProvider.name}</span>
                     <span className="px-2 py-0.5 bg-[#ff00ff]/10 text-[#ff00ff] border border-[#ff00ff]/30 rounded">
                       {selectedModel.name}
                     </span>
@@ -1589,7 +1589,7 @@ export default function Home() {
                       <button
                         onClick={() => { setChannel(null); setMessages([]); }}
                         disabled={isLoading}
-                        className="px-3 py-1 bg-[#1e1e2e] hover:bg-[#2a2a3e] text-[#888899] border border-[#1e1e2e] rounded text-[10px] font-mono transition"
+                        className="px-3 py-1 bg-[#2a2a3e] hover:bg-[#2a2a3e] text-[#a0a0b0] border border-[#2a2a3e] rounded text-[10px] font-mono transition"
                       >
                         exit
                       </button>
@@ -1617,17 +1617,17 @@ export default function Home() {
                   <div className="flex items-center gap-6 font-mono text-xs">
                     <div className="text-center">
                       <div className="text-[#00ff9f] text-lg font-bold text-glow-green">${formatUSDC(remaining)}</div>
-                      <div className="text-[10px] text-[#555566] uppercase tracking-wider">balance</div>
+                      <div className="text-[10px] text-[#707080] uppercase tracking-wider">balance</div>
                     </div>
                     <div className="text-center">
                       <div className="text-[#ff00ff] text-lg font-bold">${formatUSDC(channel.spent)}</div>
-                      <div className="text-[10px] text-[#555566] uppercase tracking-wider">spent</div>
+                      <div className="text-[10px] text-[#707080] uppercase tracking-wider">spent</div>
                     </div>
                   </div>
                 </div>
                 
                 {/* Progress bar */}
-                <div className="mt-4 h-1 bg-[#1e1e2e] rounded-full overflow-hidden">
+                <div className="mt-4 h-1 bg-[#2a2a3e] rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-[#00ff9f] to-[#ff00ff] transition-all"
                     style={{ width: `${Number(channel.spent) / Number(channel.deposit) * 100}%` }}
@@ -1637,25 +1637,25 @@ export default function Home() {
               
               {/* Auto-Sign Panel */}
               {!demoMode && (
-                <div className="px-4 pb-4 pt-2 border-t border-[#1e1e2e]">
+                <div className="px-4 pb-4 pt-2 border-t border-[#2a2a3e]">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     {/* Toggle */}
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => setAutoSignEnabled(!autoSignEnabled)}
                         className={`relative w-10 h-5 rounded-full transition-colors ${
-                          autoSignEnabled ? 'bg-[#00ff9f]' : 'bg-[#1e1e2e]'
+                          autoSignEnabled ? 'bg-[#00ff9f]' : 'bg-[#2a2a3e]'
                         }`}
                       >
-                        <div className={`absolute top-0.5 w-4 h-4 bg-[#0a0a0f] rounded-full transition-transform border ${
-                          autoSignEnabled ? 'left-5 border-[#00ff9f]' : 'left-0.5 border-[#555566]'
+                        <div className={`absolute top-0.5 w-4 h-4 bg-[#0c0c12] rounded-full transition-transform border ${
+                          autoSignEnabled ? 'left-5 border-[#00ff9f]' : 'left-0.5 border-[#707080]'
                         }`} />
                       </button>
                       <div className="font-mono text-xs">
-                        <div className={autoSignEnabled ? 'text-[#00ff9f]' : 'text-[#888899]'}>
+                        <div className={autoSignEnabled ? 'text-[#00ff9f]' : 'text-[#a0a0b0]'}>
                           {autoSignEnabled ? 'AUTO_SIGN' : 'MANUAL_SIGN'}
         </div>
-                        <div className="text-[10px] text-[#555566]">
+                        <div className="text-[10px] text-[#707080]">
                           {autoSignEnabled ? 'batch signing enabled' : 'sign each tx'}
                         </div>
                       </div>
@@ -1673,7 +1673,7 @@ export default function Home() {
                           }`}>
                             {preSignedVouchers.length - usedVoucherIndex}
                           </div>
-                          <div className="text-[10px] text-[#555566] uppercase">vouchers</div>
+                          <div className="text-[10px] text-[#707080] uppercase">vouchers</div>
                         </div>
                         
                         {/* Slider for count */}
@@ -1691,7 +1691,7 @@ export default function Home() {
                             className="w-16"
                             autoComplete="off"
                           />
-                          <span className="text-xs text-[#888899] font-mono w-6">{preSignCount}</span>
+                          <span className="text-xs text-[#a0a0b0] font-mono w-6">{preSignCount}</span>
                         </div>
                         
                         {/* Pre-Sign Button */}
@@ -1728,7 +1728,7 @@ export default function Home() {
                   <div className="terminal-dot yellow"></div>
                   <div className="terminal-dot green"></div>
                 </div>
-                <span className="font-mono text-xs text-[#555566]">output.log</span>
+                <span className="font-mono text-xs text-[#707080]">output.log</span>
               </div>
               <div className="p-4 overflow-y-auto h-[calc(100%-40px)] space-y-4">
                 {messages.map((msg, i) => (
@@ -1743,18 +1743,18 @@ export default function Home() {
                       msg.role === 'user' 
                         ? 'bg-[#00ff9f]/10 border border-[#00ff9f]/30 text-[#00ff9f]' 
                         : msg.role === 'system'
-                        ? 'bg-[#0a0a0f] border border-[#1e1e2e] text-center text-[#555566]'
-                        : 'bg-[#0d0d14] border border-[#1e1e2e] text-[#e0e0e0]'
+                        ? 'bg-[#0c0c12] border border-[#2a2a3e] text-center text-[#707080]'
+                        : 'bg-[#111118] border border-[#2a2a3e] text-[#f0f0f5]'
                     }`}>
                       {msg.role === 'user' && (
-                        <div className="text-[10px] text-[#555566] mb-1">{'>'} user</div>
+                        <div className="text-[10px] text-[#707080] mb-1">{'>'} user</div>
                       )}
                       {msg.role === 'assistant' && (
                         <div className="text-[10px] text-[#ff00ff] mb-1">{'<'} ai</div>
                       )}
                       <div className="whitespace-pre-wrap">{msg.content}</div>
                       {msg.cost && (
-                        <div className="text-[10px] text-[#555566] mt-2 text-right">// cost: {msg.cost}</div>
+                        <div className="text-[10px] text-[#707080] mt-2 text-right">// cost: {msg.cost}</div>
                       )}
                     </div>
                   </div>
@@ -1772,7 +1772,7 @@ export default function Home() {
             {/* Input - Command Line */}
             <div className="mt-4 flex gap-3">
               <label htmlFor="chat-input" className="sr-only">Message</label>
-              <div className="flex-1 flex items-center bg-[#0d0d14] border border-[#1e1e2e] rounded px-4 py-3 focus-within:border-[#00ff9f] transition">
+              <div className="flex-1 flex items-center bg-[#111118] border border-[#2a2a3e] rounded px-4 py-3 focus-within:border-[#00ff9f] transition">
                 <span className="text-[#00ff9f] font-mono text-sm mr-2">{'>'}</span>
                 <input
                   id="chat-input"
@@ -1784,7 +1784,7 @@ export default function Home() {
                   placeholder="enter message..."
                   disabled={isLoading}
                   autoComplete="off"
-                  className="flex-1 bg-transparent outline-none font-mono text-sm text-[#e0e0e0] placeholder:text-[#555566]"
+                  className="flex-1 bg-transparent outline-none font-mono text-sm text-[#f0f0f5] placeholder:text-[#707080]"
                 />
               </div>
               <button
@@ -1800,15 +1800,15 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-[#1e1e2e] py-4 mt-auto bg-[#0a0a0f]">
-        <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#555566]">
+      <footer className="border-t border-[#2a2a3e] py-4 mt-auto bg-[#0c0c12]">
+        <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#707080]">
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <a href="/directory" className="hover:text-[#00ff9f] transition">providers</a>
-            <span className="text-[#1e1e2e]">|</span>
+            <span className="text-[#2a2a3e]">|</span>
             <a href={`https://polygonscan.com/address/${DRAIN_CONTRACT}`} className="hover:text-[#00ff9f] transition">contract</a>
-            <span className="text-[#1e1e2e]">|</span>
+            <span className="text-[#2a2a3e]">|</span>
             <a href={`${selectedProvider.url}/v1/pricing`} className="hover:text-[#00ff9f] transition">api</a>
-            <span className="text-[#1e1e2e]">|</span>
+            <span className="text-[#2a2a3e]">|</span>
             <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
           </div>
           <div className="mt-2 text-[10px]">DRAIN © 2026</div>

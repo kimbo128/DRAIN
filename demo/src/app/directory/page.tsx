@@ -75,7 +75,7 @@ function MarketplaceView() {
 
   if (loading) {
     return (
-      <div className="text-center py-12 font-mono text-[#555566]">
+      <div className="text-center py-12 font-mono text-[#707080]">
         <div className="animate-pulse">⏳ loading_providers...</div>
       </div>
     );
@@ -92,8 +92,8 @@ function MarketplaceView() {
   if (providers.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="font-mono text-[#555566] mb-4">// no providers found</div>
-        <p className="text-sm text-[#888899]">Be the first to register your DRAIN provider!</p>
+        <div className="font-mono text-[#707080] mb-4">// no providers found</div>
+        <p className="text-sm text-[#a0a0b0]">Be the first to register your DRAIN provider!</p>
       </div>
     );
   }
@@ -103,7 +103,7 @@ function MarketplaceView() {
       {providers.map((provider) => (
         <div 
           key={provider.id} 
-          className={`terminal-card relative ${provider.isPremium ? 'border-[#ffff00]/40 bg-gradient-to-br from-[#0d0d14] to-[#1a1a0a]' : ''}`}
+          className={`terminal-card relative ${provider.isPremium ? 'border-[#ffff00]/40 bg-gradient-to-br from-[#111118] to-[#1a1a0a]' : ''}`}
         >
           {provider.isPremium && (
             <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-[#ffff00] text-black text-[10px] font-mono font-bold rounded shadow-lg">
@@ -117,7 +117,7 @@ function MarketplaceView() {
                 <div className="terminal-dot yellow"></div>
                 <div className="terminal-dot green"></div>
               </div>
-              <span className="font-mono text-xs text-[#555566]">{provider.id}</span>
+              <span className="font-mono text-xs text-[#707080]">{provider.id}</span>
             </div>
             <span className={`status-dot ${provider.isOnline ? 'online' : 'offline'}`}></span>
           </div>
@@ -125,8 +125,8 @@ function MarketplaceView() {
           <div className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className={`font-bold text-lg ${provider.isPremium ? 'text-[#ffff00]' : 'text-[#e0e0e0]'}`}>{provider.name}</h3>
-                <p className="text-xs text-[#555566] font-mono mt-1">
+                <h3 className={`font-bold text-lg ${provider.isPremium ? 'text-[#ffff00]' : 'text-[#f0f0f5]'}`}>{provider.name}</h3>
+                <p className="text-xs text-[#707080] font-mono mt-1">
                   {provider.providerAddress.slice(0, 10)}...{provider.providerAddress.slice(-8)}
                 </p>
               </div>
@@ -137,16 +137,16 @@ function MarketplaceView() {
               )}
             </div>
             
-            <p className="text-sm text-[#888899] mb-4 line-clamp-2">{provider.description}</p>
+            <p className="text-sm text-[#a0a0b0] mb-4 line-clamp-2">{provider.description}</p>
             
             {/* Models */}
             <div className="mb-4">
-              <div className="text-[10px] text-[#555566] mb-2 font-mono uppercase tracking-wider">// models</div>
+              <div className="text-[10px] text-[#707080] mb-2 font-mono uppercase tracking-wider">// models</div>
               <div className="flex flex-wrap gap-2">
                 {provider.models.map((model) => (
                   <span 
                     key={model.id}
-                    className="px-2 py-1 bg-[#0d0d14] border border-[#1e1e2e] rounded text-xs font-mono text-[#00ccff]"
+                    className="px-2 py-1 bg-[#111118] border border-[#2a2a3e] rounded text-xs font-mono text-[#00ccff]"
                   >
                     {model.name}
                   </span>
@@ -267,11 +267,11 @@ function SubmitForm() {
           <div className="terminal-dot yellow"></div>
           <div className="terminal-dot green"></div>
         </div>
-        <span className="font-mono text-xs text-[#555566]">provider.register()</span>
+        <span className="font-mono text-xs text-[#707080]">provider.register()</span>
       </div>
       
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
-        <div className="font-mono text-xs text-[#555566] mb-4">
+        <div className="font-mono text-xs text-[#707080] mb-4">
           // submit your DRAIN provider for review
         </div>
         
@@ -296,7 +296,7 @@ function SubmitForm() {
         
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="name" className="block text-[10px] text-[#555566] mb-1 font-mono uppercase tracking-wider">
+            <label htmlFor="name" className="block text-[10px] text-[#707080] mb-1 font-mono uppercase tracking-wider">
               Provider Name *
             </label>
             <input
@@ -311,7 +311,7 @@ function SubmitForm() {
           </div>
           
           <div>
-            <label htmlFor="apiUrl" className="block text-[10px] text-[#555566] mb-1 font-mono uppercase tracking-wider">
+            <label htmlFor="apiUrl" className="block text-[10px] text-[#707080] mb-1 font-mono uppercase tracking-wider">
               API URL *
             </label>
             <input
@@ -327,7 +327,7 @@ function SubmitForm() {
         </div>
         
         <div>
-          <label htmlFor="providerAddress" className="block text-[10px] text-[#555566] mb-1 font-mono uppercase tracking-wider">
+          <label htmlFor="providerAddress" className="block text-[10px] text-[#707080] mb-1 font-mono uppercase tracking-wider">
             Provider Wallet Address *
           </label>
           <input
@@ -343,7 +343,7 @@ function SubmitForm() {
         </div>
         
         <div>
-          <label htmlFor="description" className="block text-[10px] text-[#555566] mb-1 font-mono uppercase tracking-wider">
+          <label htmlFor="description" className="block text-[10px] text-[#707080] mb-1 font-mono uppercase tracking-wider">
             Description *
           </label>
           <textarea
@@ -353,13 +353,13 @@ function SubmitForm() {
             required
             placeholder="Describe your provider, supported models, features..."
             rows={3}
-            className="w-full bg-[#0a0a0f] border border-[#1e1e2e] rounded px-3 py-2 font-mono text-sm text-[#e0e0e0] placeholder:text-[#555566] focus:border-[#00ff9f] focus:outline-none"
+            className="w-full bg-[#0c0c12] border border-[#2a2a3e] rounded px-3 py-2 font-mono text-sm text-[#f0f0f5] placeholder:text-[#707080] focus:border-[#00ff9f] focus:outline-none"
           />
         </div>
         
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="contactEmail" className="block text-[10px] text-[#555566] mb-1 font-mono uppercase tracking-wider">
+            <label htmlFor="contactEmail" className="block text-[10px] text-[#707080] mb-1 font-mono uppercase tracking-wider">
               Contact Email *
             </label>
             <input
@@ -374,7 +374,7 @@ function SubmitForm() {
           </div>
           
           <div>
-            <label htmlFor="website" className="block text-[10px] text-[#555566] mb-1 font-mono uppercase tracking-wider">
+            <label htmlFor="website" className="block text-[10px] text-[#707080] mb-1 font-mono uppercase tracking-wider">
               Website (optional)
             </label>
             <input
@@ -399,7 +399,7 @@ function SubmitForm() {
             />
             <div>
               <div className="font-mono text-sm text-[#ffff00]">⭐ Featured Placement</div>
-              <div className="text-xs text-[#888899] mt-1">
+              <div className="text-xs text-[#a0a0b0] mt-1">
                 Get priority positioning and highlighted listing in the marketplace. 
                 We&apos;ll contact you to discuss terms after approval.
               </div>
@@ -415,7 +415,7 @@ function SubmitForm() {
           {submitting ? 'TESTING_CONNECTION...' : 'SUBMIT_FOR_REVIEW'}
         </button>
         
-        <p className="text-[10px] text-[#555566] font-mono text-center">
+        <p className="text-[10px] text-[#707080] font-mono text-center">
           // your provider will be tested automatically before submission
         </p>
       </form>
@@ -431,9 +431,9 @@ export default function DirectoryPage() {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'submit'>('marketplace');
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#e0e0e0] bg-grid noise">
+    <div className="min-h-screen bg-[#0c0c12] text-[#f0f0f5] bg-grid noise">
       {/* Header */}
-      <header className="border-b border-[#1e1e2e] sticky top-0 bg-[#0a0a0f]/95 backdrop-blur-sm z-50">
+      <header className="border-b border-[#2a2a3e] sticky top-0 bg-[#0c0c12]/95 backdrop-blur-sm z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="terminal-dots hidden sm:flex">
@@ -445,7 +445,7 @@ export default function DirectoryPage() {
               <span className="text-xl font-bold font-mono gradient-text tracking-wider">
                 DRAIN
               </span>
-              <span className="text-[10px] text-[#555566] hidden sm:inline font-mono uppercase tracking-widest">
+              <span className="text-[10px] text-[#707080] hidden sm:inline font-mono uppercase tracking-widest">
                 // marketplace
               </span>
             </a>
@@ -463,7 +463,7 @@ export default function DirectoryPage() {
           <h1 className="text-3xl font-bold font-mono gradient-text mb-2">
             AI_PROVIDERS
           </h1>
-          <p className="text-[#555566] font-mono text-sm">
+          <p className="text-[#707080] font-mono text-sm">
             // discover DRAIN-compatible AI providers with micropayments
           </p>
         </div>
@@ -480,7 +480,7 @@ export default function DirectoryPage() {
               className={`px-4 py-2 rounded font-mono text-xs transition ${
                 activeTab === tab.id
                   ? 'bg-[#00ff9f]/10 text-[#00ff9f] border border-[#00ff9f]/30'
-                  : 'bg-[#0d0d14] text-[#888899] border border-[#1e1e2e] hover:border-[#00ff9f]/30'
+                  : 'bg-[#111118] text-[#a0a0b0] border border-[#2a2a3e] hover:border-[#00ff9f]/30'
               }`}
             >
               {tab.icon} {tab.label}
@@ -494,13 +494,13 @@ export default function DirectoryPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#1e1e2e] py-4 mt-auto bg-[#0a0a0f]">
-        <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#555566]">
+      <footer className="border-t border-[#2a2a3e] py-4 mt-auto bg-[#0c0c12]">
+        <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#707080]">
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <a href="/" className="hover:text-[#00ff9f] transition">try_drain</a>
-            <span className="text-[#1e1e2e]">|</span>
+            <span className="text-[#2a2a3e]">|</span>
             <a href="/api/directory/providers" className="hover:text-[#00ff9f] transition">api</a>
-            <span className="text-[#1e1e2e]">|</span>
+            <span className="text-[#2a2a3e]">|</span>
             <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
           </div>
           <div className="mt-2 text-[10px]">DRAIN © 2026</div>
