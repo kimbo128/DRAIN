@@ -261,6 +261,25 @@ X-DRAIN-Remaining: 9841750
 
 See [`provider/README.md`](./provider/README.md) for full documentation.
 
+## Provider Directory
+
+**🟢 Live Directory:** https://believable-inspiration-production-b1c6.up.railway.app/directory
+
+Discover and register DRAIN-compatible AI providers:
+
+- **Marketplace** – Browse approved providers with live status
+- **Register** – Submit your provider for review
+- **Admin** – Approve/reject providers (admin only)
+
+### API for MCP Integration
+
+```bash
+# Get all approved providers (MCP-friendly format)
+curl https://your-demo.railway.app/api/mcp/providers
+```
+
+Response includes provider info, models, pricing, and live status for the DRAIN MCP Server.
+
 ## Demo Application
 
 **🟢 Live Demo:** https://believable-inspiration-production-b1c6.up.railway.app
@@ -293,7 +312,9 @@ Features:
 | **TypeScript SDK**      | ✅ **Available** |
 | **Reference Provider**  | ✅ **Available** |
 | **Demo Website**        | ✅ **[Live Demo](https://believable-inspiration-production-b1c6.up.railway.app/)** |
+| **Provider Directory**  | ✅ **[Live](https://believable-inspiration-production-b1c6.up.railway.app/directory)** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
+| MCP Server              | 📋 Planned     |
 | Security Audit          | 📋 Planned     |
 
 ### Deployed Contracts
