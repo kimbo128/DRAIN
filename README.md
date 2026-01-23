@@ -1,5 +1,9 @@
 # DRAIN
 
+<div align="center">
+  <img src="docs/drain-logo.png" alt="DRAIN Logo" width="400">
+</div>
+
 **Decentralized Runtime for AI Networks**
 
 An open protocol for trustless, streaming micropayments between AI consumers and providers.
@@ -36,6 +40,10 @@ DRAIN enables permissionless, pay-per-token AI inference without intermediaries.
 ## How It Works
 
 DRAIN is like a **prepaid card for AI**: deposit USDC, use it across requests, withdraw the remainder.
+
+<div align="center">
+  <img src="docs/drain-infographic.png" alt="DRAIN Protocol Overview" width="800">
+</div>
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
