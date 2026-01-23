@@ -184,9 +184,48 @@ drain/
 ├── provider/                   # Reference AI Provider
 │   ├── src/index.ts            # Express server (OpenAI-compatible)
 │   └── src/drain.ts            # Voucher validation
-└── demo/                       # Demo Website
-    └── src/app/page.tsx        # Next.js + RainbowKit
+├── mcp/                        # MCP Server for AI Agents
+│   ├── src/index.ts            # MCP server entry point
+│   └── src/tools/              # drain_chat, drain_balance, etc.
+└── demo/                       # Marketplace & Demo
+    └── src/app/page.tsx        # Next.js frontend
 ```
+
+## MCP Server (Agent-to-Agent)
+
+DRAIN includes an MCP (Model Context Protocol) server that enables AI agents to autonomously pay for AI services.
+
+```bash
+npm install -g drain-mcp
+```
+
+Configure in Cursor or Claude:
+
+```json
+{
+  "mcpServers": {
+    "drain": {
+      "command": "npx",
+      "args": ["-y", "drain-mcp"],
+      "env": {
+        "DRAIN_PRIVATE_KEY": "0x..."
+      }
+    }
+  }
+}
+```
+
+**Available Tools:**
+
+| Tool | Description |
+|------|-------------|
+| `drain_providers` | Discover AI providers |
+| `drain_balance` | Check wallet balance |
+| `drain_open_channel` | Open payment channel |
+| `drain_chat` | AI chat with payment |
+| `drain_close_channel` | Close channel, get refund |
+
+See [`mcp/README.md`](./mcp/README.md) for full documentation.
 
 ## SDK Quick Start
 

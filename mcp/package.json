@@ -1,0 +1,43 @@
+{
+  "name": "drain-mcp",
+  "version": "0.1.0",
+  "description": "MCP Server for DRAIN Protocol - Autonomous AI payments",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "drain-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "drain",
+    "ai",
+    "payments",
+    "micropayments",
+    "polygon",
+    "usdc",
+    "agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
