@@ -64,7 +64,10 @@ export class ProviderService {
     }
     
     try {
-      const response = await fetch(this.config.directoryUrl);
+      // Include offline providers - the MCP server should show all options
+      const url = new URL(this.config.directoryUrl);
+      url.searchParams.set('online', 'false');
+      const response = await fetch(url.toString());
       
       if (!response.ok) {
         throw new Error(`Failed to fetch providers: ${response.status} ${response.statusText}`);

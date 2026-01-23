@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
       _meta: {
         protocol: 'DRAIN',
         network: 'polygon',
-        contract: '0x73d16e39F0E4C0bfb8b3e41a2F721EcC0eDef74F',
-        directoryUrl: 'https://drain-demo.railway.app/directory',
+        contract: '0x1C1918C99b6DcE977392E4131C91654d8aB71e64',
+        directoryUrl: 'https://believable-inspiration-production-b1c6.up.railway.app/directory',
       },
     });
   } catch (error: any) {

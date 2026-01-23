@@ -60,7 +60,7 @@ export function loadConfig(): DrainConfig {
   }
   
   const rpcUrl = process.env.DRAIN_RPC_URL || DEFAULT_RPC_URLS[chainId];
-  const directoryUrl = process.env.DRAIN_DIRECTORY_URL || 'https://drain-marketplace.railway.app/api/mcp/providers';
+  const directoryUrl = process.env.DRAIN_DIRECTORY_URL || 'https://believable-inspiration-production-b1c6.up.railway.app/api/mcp/providers';
   
   const drainAddress = DRAIN_ADDRESSES[chainId];
   const usdcAddress = USDC_ADDRESSES[chainId];
