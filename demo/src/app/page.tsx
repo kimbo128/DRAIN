@@ -1034,7 +1034,7 @@ export default function Home() {
     });
     setMessages([{
       role: 'system',
-      content: '🎮 Demo Mode Active\n\nThis is a simulation - no real transactions. Connect a real wallet to use DRAIN with actual payments!'
+      content: '// test mode active\n\nSimulated environment - no blockchain transactions.\nConnect a wallet for real micropayments.'
     }]);
   };
 
@@ -1097,8 +1097,8 @@ export default function Home() {
             {address ? (
               <>
                 {demoMode && (
-                  <span className="px-2 py-1 bg-[#ff00ff]/10 text-[#ff00ff] rounded text-xs font-mono border border-[#ff00ff]/30">
-                    DEMO_MODE
+                  <span className="px-2 py-0.5 bg-[#555566]/20 text-[#888899] rounded text-[10px] font-mono">
+                    test
                   </span>
                 )}
                 {!isPolygon && !demoMode && (
@@ -1136,9 +1136,10 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   onClick={startDemoMode}
-                  className="btn-secondary font-mono text-xs"
+                  className="px-3 py-1.5 text-[#555566] hover:text-[#888899] font-mono text-[10px] transition"
+                  title="Try without wallet"
                 >
-                  DEMO
+                  test_mode
                 </button>
                 <button
                   onClick={connectWallet}
@@ -1204,7 +1205,7 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="flex gap-4 justify-center mt-8">
+            <div className="flex flex-col items-center gap-3 mt-8">
               <button
                 onClick={connectWallet}
                 className="btn-primary font-mono px-8 py-4 text-sm"
@@ -1213,9 +1214,9 @@ export default function Home() {
               </button>
               <button
                 onClick={startDemoMode}
-                className="btn-secondary font-mono px-8 py-4 text-sm"
+                className="text-[#555566] hover:text-[#888899] font-mono text-xs transition"
               >
-                RUN_DEMO
+                or try without wallet →
               </button>
             </div>
             
@@ -1588,9 +1589,9 @@ export default function Home() {
                       <button
                         onClick={() => { setChannel(null); setMessages([]); }}
                         disabled={isLoading}
-                        className="px-3 py-1 bg-[#ff4444]/10 hover:bg-[#ff4444]/20 text-[#ff4444] border border-[#ff4444]/30 rounded text-xs font-mono transition"
+                        className="px-3 py-1 bg-[#1e1e2e] hover:bg-[#2a2a3e] text-[#888899] border border-[#1e1e2e] rounded text-[10px] font-mono transition"
                       >
-                        EXIT_DEMO
+                        exit
                       </button>
                     ) : (
                       <ChannelActionButton 
@@ -1798,19 +1799,19 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer - Terminal Style */}
+      {/* Footer */}
       <footer className="border-t border-[#1e1e2e] py-4 mt-auto bg-[#0a0a0f]">
         <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#555566]">
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <a href="/directory" className="hover:text-[#00ff9f] transition">directory</a>
-            <span className="text-[#1e1e2e]">|</span>
-            <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
+            <a href="/directory" className="hover:text-[#00ff9f] transition">providers</a>
             <span className="text-[#1e1e2e]">|</span>
             <a href={`https://polygonscan.com/address/${DRAIN_CONTRACT}`} className="hover:text-[#00ff9f] transition">contract</a>
             <span className="text-[#1e1e2e]">|</span>
             <a href={`${selectedProvider.url}/v1/pricing`} className="hover:text-[#00ff9f] transition">api</a>
+            <span className="text-[#1e1e2e]">|</span>
+            <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
           </div>
-          <div className="mt-2 text-[10px]">// DRAIN protocol v1.0 © 2026</div>
+          <div className="mt-2 text-[10px]">DRAIN © 2026</div>
         </div>
       </footer>
     </div>

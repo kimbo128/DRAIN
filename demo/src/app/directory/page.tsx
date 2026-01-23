@@ -23,6 +23,7 @@ interface Provider {
   submittedAt: number;
   approvedAt?: number;
   rejectedReason?: string;
+  isPremium: boolean;
   isOnline: boolean;
   lastCheckedAt?: number;
   avgResponseTime?: number;
@@ -100,7 +101,15 @@ function MarketplaceView() {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {providers.map((provider) => (
-        <div key={provider.id} className="terminal-card">
+        <div 
+          key={provider.id} 
+          className={`terminal-card relative ${provider.isPremium ? 'border-[#ffff00]/40 bg-gradient-to-br from-[#0d0d14] to-[#1a1a0a]' : ''}`}
+        >
+          {provider.isPremium && (
+            <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-[#ffff00] text-black text-[10px] font-mono font-bold rounded shadow-lg">
+              ⭐ FEATURED
+            </div>
+          )}
           <div className="terminal-header">
             <div className="flex items-center gap-3">
               <div className="terminal-dots">
@@ -116,7 +125,7 @@ function MarketplaceView() {
           <div className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-bold text-[#e0e0e0] text-lg">{provider.name}</h3>
+                <h3 className={`font-bold text-lg ${provider.isPremium ? 'text-[#ffff00]' : 'text-[#e0e0e0]'}`}>{provider.name}</h3>
                 <p className="text-xs text-[#555566] font-mono mt-1">
                   {provider.providerAddress.slice(0, 10)}...{provider.providerAddress.slice(-8)}
                 </p>
@@ -196,6 +205,7 @@ function SubmitForm() {
     contactEmail: '',
     website: '',
     logoUrl: '',
+    wantsPremium: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string; testResult?: ConnectionTestResult } | null>(null);
@@ -217,7 +227,9 @@ function SubmitForm() {
       if (data.success) {
         setResult({
           success: true,
-          message: 'Provider submitted for review! We\'ll notify you once approved.',
+          message: formData.wantsPremium 
+            ? 'Provider submitted! We\'ll contact you about featured placement.' 
+            : 'Provider submitted for review! We\'ll notify you once approved.',
           testResult: data.testResult,
         });
         setFormData({
@@ -228,6 +240,7 @@ function SubmitForm() {
           contactEmail: '',
           website: '',
           logoUrl: '',
+          wantsPremium: false,
         });
       } else {
         setResult({
@@ -375,6 +388,25 @@ function SubmitForm() {
           </div>
         </div>
         
+        {/* Premium Placement Option */}
+        <div className="p-4 bg-gradient-to-r from-[#ffff00]/5 to-[#ff9900]/5 border border-[#ffff00]/20 rounded">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.wantsPremium}
+              onChange={(e) => setFormData({ ...formData, wantsPremium: e.target.checked })}
+              className="mt-1 w-4 h-4 accent-[#ffff00]"
+            />
+            <div>
+              <div className="font-mono text-sm text-[#ffff00]">⭐ Featured Placement</div>
+              <div className="text-xs text-[#888899] mt-1">
+                Get priority positioning and highlighted listing in the marketplace. 
+                We&apos;ll contact you to discuss terms after approval.
+              </div>
+            </div>
+          </label>
+        </div>
+        
         <button
           type="submit"
           disabled={submitting}
@@ -392,308 +424,11 @@ function SubmitForm() {
 }
 
 // ============================================================================
-// ADMIN INTERFACE
-// ============================================================================
-
-function AdminInterface() {
-  const [password, setPassword] = useState('');
-  const [authenticated, setAuthenticated] = useState(false);
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [counts, setCounts] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
-  const [loading, setLoading] = useState(false);
-  const [actionResult, setActionResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending'>('pending');
-
-  async function authenticate() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/directory/admin', {
-        headers: { 'x-admin-password': password },
-      });
-      
-      if (res.ok) {
-        setAuthenticated(true);
-        await fetchProviders();
-      } else {
-        alert('Invalid password');
-      }
-    } catch (err) {
-      alert('Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchProviders() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/directory/admin?filter=${filter}`, {
-        headers: { 'x-admin-password': password },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProviders(data.providers);
-        setCounts(data.counts);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function performAction(action: string, providerId: string, reason?: string) {
-    setLoading(true);
-    setActionResult(null);
-    
-    try {
-      const res = await fetch('/api/directory/admin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-password': password,
-        },
-        body: JSON.stringify({ action, providerId, reason }),
-      });
-      
-      const data = await res.json();
-      setActionResult({
-        id: providerId,
-        success: data.success,
-        message: data.message || data.error,
-      });
-      
-      if (data.success) {
-        await fetchProviders();
-      }
-    } catch (err: any) {
-      setActionResult({
-        id: providerId,
-        success: false,
-        message: err.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (authenticated) {
-      fetchProviders();
-    }
-  }, [filter, authenticated]);
-
-  if (!authenticated) {
-    return (
-      <div className="terminal-card max-w-md mx-auto">
-        <div className="terminal-header">
-          <div className="terminal-dots">
-            <div className="terminal-dot red"></div>
-            <div className="terminal-dot yellow"></div>
-            <div className="terminal-dot green"></div>
-          </div>
-          <span className="font-mono text-xs text-[#555566]">admin.login()</span>
-        </div>
-        
-        <div className="p-6">
-          <div className="font-mono text-xs text-[#555566] mb-4">// admin authentication required</div>
-          
-          <div className="flex gap-2">
-            <label htmlFor="admin-password" className="sr-only">Admin Password</label>
-            <input
-              id="admin-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && authenticate()}
-              placeholder="enter_password"
-              className="flex-1 font-mono"
-            />
-            <button
-              onClick={authenticate}
-              disabled={loading}
-              className="btn-primary px-4 font-mono text-xs"
-            >
-              {loading ? '...' : 'LOGIN'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: 'total', value: counts.total, color: '#e0e0e0' },
-          { label: 'pending', value: counts.pending, color: '#ffff00' },
-          { label: 'approved', value: counts.approved, color: '#00ff9f' },
-          { label: 'rejected', value: counts.rejected, color: '#ff4444' },
-        ].map((stat) => (
-          <div key={stat.label} className="terminal-card">
-            <div className="p-4 text-center">
-              <div className="text-2xl font-bold font-mono" style={{ color: stat.color }}>
-                {stat.value}
-              </div>
-              <div className="text-[10px] text-[#555566] font-mono uppercase tracking-wider">
-                {stat.label}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      {/* Filter */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setFilter('pending')}
-          className={`px-4 py-2 rounded font-mono text-xs transition ${
-            filter === 'pending'
-              ? 'bg-[#ffff00]/10 text-[#ffff00] border border-[#ffff00]/30'
-              : 'bg-[#0d0d14] text-[#888899] border border-[#1e1e2e]'
-          }`}
-        >
-          PENDING ({counts.pending})
-        </button>
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded font-mono text-xs transition ${
-            filter === 'all'
-              ? 'bg-[#00ccff]/10 text-[#00ccff] border border-[#00ccff]/30'
-              : 'bg-[#0d0d14] text-[#888899] border border-[#1e1e2e]'
-          }`}
-        >
-          ALL ({counts.total})
-        </button>
-        <button
-          onClick={() => performAction('health-check-all', '')}
-          disabled={loading}
-          className="ml-auto px-4 py-2 bg-[#0d0d14] text-[#888899] border border-[#1e1e2e] rounded font-mono text-xs hover:text-[#00ff9f] hover:border-[#00ff9f]/30 transition"
-        >
-          RUN_HEALTH_CHECK
-        </button>
-      </div>
-      
-      {/* Provider List */}
-      <div className="space-y-4">
-        {providers.length === 0 ? (
-          <div className="text-center py-12 font-mono text-[#555566]">
-            // no {filter === 'pending' ? 'pending' : ''} providers found
-          </div>
-        ) : (
-          providers.map((provider) => (
-            <div key={provider.id} className="terminal-card">
-              <div className="terminal-header justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="terminal-dots">
-                    <div className="terminal-dot red"></div>
-                    <div className="terminal-dot yellow"></div>
-                    <div className="terminal-dot green"></div>
-                  </div>
-                  <span className="font-mono text-xs text-[#555566]">{provider.id}</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
-                  provider.status === 'approved' 
-                    ? 'bg-[#00ff9f]/10 text-[#00ff9f] border-[#00ff9f]/30'
-                    : provider.status === 'pending'
-                    ? 'bg-[#ffff00]/10 text-[#ffff00] border-[#ffff00]/30'
-                    : 'bg-[#ff4444]/10 text-[#ff4444] border-[#ff4444]/30'
-                }`}>
-                  {provider.status.toUpperCase()}
-                </span>
-              </div>
-              
-              <div className="p-4">
-                <h3 className="font-bold text-[#e0e0e0] text-lg mb-2">{provider.name}</h3>
-                
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono mb-4">
-                  <div>
-                    <div className="text-[#555566]">api_url</div>
-                    <div className="text-[#00ccff] truncate">{provider.apiUrl}</div>
-                  </div>
-                  <div>
-                    <div className="text-[#555566]">address</div>
-                    <div className="text-[#e0e0e0]">{provider.providerAddress.slice(0, 14)}...</div>
-                  </div>
-                  <div>
-                    <div className="text-[#555566]">email</div>
-                    <div className="text-[#e0e0e0]">{provider.contactEmail}</div>
-                  </div>
-                  <div>
-                    <div className="text-[#555566]">submitted</div>
-                    <div className="text-[#e0e0e0]">{new Date(provider.submittedAt).toLocaleDateString()}</div>
-                  </div>
-                </div>
-                
-                <p className="text-sm text-[#888899] mb-4">{provider.description}</p>
-                
-                {actionResult?.id === provider.id && (
-                  <div className={`mb-4 p-3 rounded font-mono text-xs ${
-                    actionResult.success
-                      ? 'bg-[#00ff9f]/10 text-[#00ff9f] border border-[#00ff9f]/30'
-                      : 'bg-[#ff4444]/10 text-[#ff4444] border border-[#ff4444]/30'
-                  }`}>
-                    {actionResult.message}
-                  </div>
-                )}
-                
-                {/* Actions */}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => performAction('test', provider.id)}
-                    disabled={loading}
-                    className="px-3 py-1.5 bg-[#0d0d14] border border-[#1e1e2e] rounded text-xs font-mono text-[#888899] hover:text-[#00ccff] hover:border-[#00ccff]/30 transition"
-                  >
-                    🔄 TEST
-                  </button>
-                  
-                  {provider.status === 'pending' && (
-                    <>
-                      <button
-                        onClick={() => performAction('approve', provider.id)}
-                        disabled={loading}
-                        className="px-3 py-1.5 bg-[#00ff9f]/10 border border-[#00ff9f]/30 rounded text-xs font-mono text-[#00ff9f] hover:bg-[#00ff9f]/20 transition"
-                      >
-                        ✓ APPROVE
-                      </button>
-                      <button
-                        onClick={() => {
-                          const reason = prompt('Rejection reason:');
-                          if (reason) performAction('reject', provider.id, reason);
-                        }}
-                        disabled={loading}
-                        className="px-3 py-1.5 bg-[#ff4444]/10 border border-[#ff4444]/30 rounded text-xs font-mono text-[#ff4444] hover:bg-[#ff4444]/20 transition"
-                      >
-                        ✗ REJECT
-                      </button>
-                    </>
-                  )}
-                  
-                  <button
-                    onClick={() => {
-                      if (confirm('Delete this provider?')) performAction('delete', provider.id);
-                    }}
-                    disabled={loading}
-                    className="px-3 py-1.5 bg-[#0d0d14] border border-[#1e1e2e] rounded text-xs font-mono text-[#555566] hover:text-[#ff4444] hover:border-[#ff4444]/30 transition ml-auto"
-                  >
-                    DELETE
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
 // MAIN PAGE
 // ============================================================================
 
 export default function DirectoryPage() {
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'submit' | 'admin'>('marketplace');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'submit'>('marketplace');
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-[#e0e0e0] bg-grid noise">
@@ -711,13 +446,13 @@ export default function DirectoryPage() {
                 DRAIN
               </span>
               <span className="text-[10px] text-[#555566] hidden sm:inline font-mono uppercase tracking-widest">
-                // directory
+                // marketplace
               </span>
             </a>
           </div>
           
           <a href="/" className="btn-secondary font-mono text-xs">
-            DEMO
+            TRY_NOW
           </a>
         </div>
       </header>
@@ -726,23 +461,22 @@ export default function DirectoryPage() {
         {/* Hero */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold font-mono gradient-text mb-2">
-            PROVIDER_DIRECTORY
+            AI_PROVIDERS
           </h1>
           <p className="text-[#555566] font-mono text-sm">
-            // discover and register DRAIN-compatible AI providers
+            // discover DRAIN-compatible AI providers with micropayments
           </p>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-8 justify-center">
           {[
-            { id: 'marketplace', label: 'MARKETPLACE', icon: '🏪' },
-            { id: 'submit', label: 'REGISTER', icon: '📝' },
-            { id: 'admin', label: 'ADMIN', icon: '🔐' },
+            { id: 'marketplace', label: 'BROWSE', icon: '🔍' },
+            { id: 'submit', label: 'LIST_YOUR_API', icon: '➕' },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'marketplace' | 'submit')}
               className={`px-4 py-2 rounded font-mono text-xs transition ${
                 activeTab === tab.id
                   ? 'bg-[#00ff9f]/10 text-[#00ff9f] border border-[#00ff9f]/30'
@@ -757,20 +491,19 @@ export default function DirectoryPage() {
         {/* Content */}
         {activeTab === 'marketplace' && <MarketplaceView />}
         {activeTab === 'submit' && <SubmitForm />}
-        {activeTab === 'admin' && <AdminInterface />}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-[#1e1e2e] py-4 mt-auto bg-[#0a0a0f]">
         <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#555566]">
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <a href="/" className="hover:text-[#00ff9f] transition">demo</a>
-            <span className="text-[#1e1e2e]">|</span>
-            <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
+            <a href="/" className="hover:text-[#00ff9f] transition">try_drain</a>
             <span className="text-[#1e1e2e]">|</span>
             <a href="/api/directory/providers" className="hover:text-[#00ff9f] transition">api</a>
+            <span className="text-[#1e1e2e]">|</span>
+            <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
           </div>
-          <div className="mt-2 text-[10px]">// DRAIN directory v1.0</div>
+          <div className="mt-2 text-[10px]">DRAIN © 2026</div>
         </div>
       </footer>
     </div>

@@ -218,6 +218,33 @@ export async function POST(request: NextRequest) {
         });
       }
       
+      case 'toggle-premium': {
+        if (!providerId) {
+          return NextResponse.json(
+            { success: false, error: 'Missing providerId' },
+            { status: 400 }
+          );
+        }
+        
+        const provider = getProviderById(providerId);
+        if (!provider) {
+          return NextResponse.json(
+            { success: false, error: 'Provider not found' },
+            { status: 404 }
+          );
+        }
+        
+        const updated = updateProvider(providerId, {
+          isPremium: !provider.isPremium,
+        });
+        
+        return NextResponse.json({
+          success: true,
+          message: `Provider ${updated?.isPremium ? 'promoted to' : 'removed from'} premium`,
+          provider: updated,
+        });
+      }
+      
       default:
         return NextResponse.json(
           { success: false, error: `Unknown action: ${action}` },

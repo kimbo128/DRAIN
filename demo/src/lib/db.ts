@@ -33,6 +33,11 @@ export interface Provider {
   rejectedAt?: number;
   rejectedReason?: string;
   
+  // Premium listing
+  isPremium: boolean;
+  premiumUntil?: number; // Unix timestamp, optional expiry
+  wantsPremium?: boolean; // Requested premium during registration
+  
   // Live stats (updated by health check)
   isOnline: boolean;
   lastCheckedAt?: number;
@@ -106,7 +111,13 @@ export function getAllProviders(): Provider[] {
 }
 
 export function getApprovedProviders(): Provider[] {
-  return loadDb().providers.filter(p => p.status === 'approved');
+  const providers = loadDb().providers.filter(p => p.status === 'approved');
+  // Sort: Premium first, then by approval date
+  return providers.sort((a, b) => {
+    if (a.isPremium && !b.isPremium) return -1;
+    if (!a.isPremium && b.isPremium) return 1;
+    return (b.approvedAt || 0) - (a.approvedAt || 0);
+  });
 }
 
 export function getPendingProviders(): Provider[] {
@@ -123,7 +134,7 @@ export function getProviderByAddress(address: string): Provider | undefined {
   );
 }
 
-export function addProvider(provider: Omit<Provider, 'id' | 'submittedAt' | 'status' | 'isOnline' | 'models'>): Provider {
+export function addProvider(provider: Omit<Provider, 'id' | 'submittedAt' | 'status' | 'isOnline' | 'isPremium' | 'models'>): Provider {
   const db = loadDb();
   
   const newProvider: Provider = {
@@ -132,6 +143,7 @@ export function addProvider(provider: Omit<Provider, 'id' | 'submittedAt' | 'sta
     status: 'pending',
     submittedAt: Date.now(),
     isOnline: false,
+    isPremium: false,
     models: [],
   };
   

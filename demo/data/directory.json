@@ -11,8 +11,9 @@
       "status": "approved",
       "submittedAt": 1737619200000,
       "approvedAt": 1737619200000,
-      "isOnline": true,
-      "lastCheckedAt": 1737619200000,
+      "isPremium": true,
+      "isOnline": false,
+      "lastCheckedAt": 1769162433402,
       "avgResponseTime": 150,
       "models": [
         {
