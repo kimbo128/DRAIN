@@ -267,14 +267,18 @@ app.post('/v1/chat/completions', async (req, res) => {
 /**
  * POST /v1/admin/claim
  * Trigger payment claims (should be protected in production)
+ * Query params:
+ *   - force=true: Claim all vouchers regardless of threshold
  */
 app.post('/v1/admin/claim', async (req, res) => {
   try {
-    const txHashes = await drainService.claimPayments();
+    const forceAll = req.query.force === 'true';
+    const txHashes = await drainService.claimPayments(forceAll);
     res.json({
       success: true,
       claimed: txHashes.length,
       transactions: txHashes,
+      forced: forceAll,
     });
   } catch (error) {
     res.status(500).json({
@@ -295,6 +299,30 @@ app.get('/v1/admin/stats', (req, res) => {
     chainId: config.chainId,
     ...stats,
     totalEarned: formatUnits(stats.totalEarned, 6) + ' USDC',
+    claimThreshold: formatUnits(config.claimThreshold, 6) + ' USDC',
+  });
+});
+
+/**
+ * GET /v1/admin/vouchers
+ * Get pending vouchers (for debugging)
+ */
+app.get('/v1/admin/vouchers', (req, res) => {
+  const unclaimed = storage.getUnclaimedVouchers();
+  const highest = storage.getHighestVoucherPerChannel();
+  
+  res.json({
+    provider: drainService.getProviderAddress(),
+    unclaimedCount: unclaimed.length,
+    channels: Array.from(highest.entries()).map(([channelId, voucher]) => ({
+      channelId,
+      amount: formatUnits(voucher.amount, 6) + ' USDC',
+      amountRaw: voucher.amount.toString(),
+      nonce: voucher.nonce.toString(),
+      consumer: voucher.consumer,
+      claimed: voucher.claimed,
+      receivedAt: new Date(voucher.receivedAt).toISOString(),
+    })),
   });
 });
 

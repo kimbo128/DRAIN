@@ -230,13 +230,14 @@ export class DrainService {
   /**
    * Claim payments for all channels above threshold
    */
-  async claimPayments(): Promise<Hash[]> {
+  async claimPayments(forceAll: boolean = false): Promise<Hash[]> {
     const txHashes: Hash[] = [];
     const highest = this.storage.getHighestVoucherPerChannel();
 
     for (const [channelId, voucher] of highest) {
-      // Skip if below threshold
-      if (voucher.amount < this.config.claimThreshold) {
+      // Skip if below threshold (unless force)
+      if (!forceAll && voucher.amount < this.config.claimThreshold) {
+        console.log(`Skipping channel ${channelId}: amount ${voucher.amount} below threshold ${this.config.claimThreshold}`);
         continue;
       }
 
