@@ -258,7 +258,7 @@ See [`sdk/README.md`](./sdk/README.md) for full documentation.
 
 OpenAI-compatible API server that accepts DRAIN payments.
 
-**🟢 Live Provider:** https://drain-production-a9d4.up.railway.app
+**🟢 Live Provider:** https://drain-production-a9d4.up.railway.app/v1/pricing
 
 ### Available Models & Pricing
 
