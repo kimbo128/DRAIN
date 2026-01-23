@@ -1,0 +1,35 @@
+{
+  "providers": [
+    {
+      "id": "prov_initial_drain",
+      "name": "DRAIN Reference Provider",
+      "apiUrl": "https://drain-provider.railway.app",
+      "providerAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f5bE91",
+      "description": "Official DRAIN reference provider running on Railway. Supports GPT-4o and GPT-4o-mini with competitive pricing.",
+      "contactEmail": "contact@drain.dev",
+      "website": "https://github.com/kimbo128/DRAIN",
+      "status": "approved",
+      "submittedAt": 1737619200000,
+      "approvedAt": 1737619200000,
+      "isOnline": true,
+      "lastCheckedAt": 1737619200000,
+      "avgResponseTime": 150,
+      "models": [
+        {
+          "id": "gpt-4o",
+          "name": "gpt-4o",
+          "inputCostPer1k": "0.0075",
+          "outputCostPer1k": "0.0225"
+        },
+        {
+          "id": "gpt-4o-mini",
+          "name": "gpt-4o-mini",
+          "inputCostPer1k": "0.00015",
+          "outputCostPer1k": "0.0006"
+        }
+      ],
+      "chainId": 137
+    }
+  ],
+  "adminPassword": "drain-admin-2026"
+}

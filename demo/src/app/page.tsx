@@ -1802,6 +1802,8 @@ export default function Home() {
       <footer className="border-t border-[#1e1e2e] py-4 mt-auto bg-[#0a0a0f]">
         <div className="max-w-6xl mx-auto px-4 text-center font-mono text-xs text-[#555566]">
           <div className="flex items-center justify-center gap-4 flex-wrap">
+            <a href="/directory" className="hover:text-[#00ff9f] transition">directory</a>
+            <span className="text-[#1e1e2e]">|</span>
             <a href="https://github.com/kimbo128/DRAIN" className="hover:text-[#00ff9f] transition">github</a>
             <span className="text-[#1e1e2e]">|</span>
             <a href={`https://polygonscan.com/address/${DRAIN_CONTRACT}`} className="hover:text-[#00ff9f] transition">contract</a>
