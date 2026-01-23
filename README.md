@@ -81,6 +81,18 @@ DRAIN is like a **prepaid card for AI**: deposit USDC, use it across requests, w
 2. **Deliver Service**: Return AI response
 3. **Claim Payment**: Submit highest voucher to get paid (~$0.02 gas)
 
+### Channel Duration & Provider Protection
+
+The **consumer sets the channel duration** when opening (e.g., 24h). But providers control their requirements:
+
+| Provider Can... | How |
+|-----------------|-----|
+| **Require minimum duration** | Reject vouchers from channels < X hours |
+| **Recommend duration** | Document in API: "We recommend 24h channels" |
+| **Claim anytime** | No deadline until consumer calls `close()` |
+
+**Key insight:** Even after channel expiry, the provider can claim as long as the consumer hasn't closed. The consumer must actively call `close()` – it's not automatic.
+
 ### Vouchers Are Cumulative
 
 Each voucher contains the **total** amount spent, not the increment:
@@ -353,7 +365,33 @@ No. Channels have a fixed duration (e.g., 24h) to protect providers. After expir
 <details>
 <summary><strong>When should providers claim?</strong></summary>
 
-Recommended: when accumulated earnings exceed ~$10 (to amortize $0.02 gas). Or before channel expiry.
+Recommended: when accumulated earnings exceed ~$10 (to amortize $0.02 gas). Providers can claim **at any time** – before, during, or after channel expiry.
+</details>
+
+<details>
+<summary><strong>What happens to unclaimed vouchers after expiry?</strong></summary>
+
+**Providers are protected by the channel duration.** Here's the timeline:
+
+```
+Channel Open → Provider can claim (anytime) → Channel Expiry → Consumer can close
+     │                    │                        │                  │
+     └────────────────────┴────────────────────────┴──────────────────┘
+                    Provider can claim throughout this entire period
+```
+
+- **Provider can claim**: From channel open until consumer calls `close()`
+- **Consumer can close**: Only AFTER channel expiry
+- **The gap is your protection**: Even after expiry, if the consumer doesn't immediately close, you can still claim
+
+**Example with 24h channel:**
+1. Consumer opens channel at 10:00 AM
+2. Consumer uses service, signs vouchers worth $5
+3. Channel expires at 10:00 AM next day
+4. Consumer might close at 2:00 PM (4 hours later)
+5. Provider can claim anytime from 10:00 AM Day 1 until 2:00 PM Day 2 (28 hours!)
+
+**Best practice:** Set up monitoring to claim before expiry, but know you have a buffer.
 </details>
 
 <details>
