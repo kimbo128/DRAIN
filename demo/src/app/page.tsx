@@ -202,7 +202,10 @@ export default function Home() {
   // Channel history
   const [channelHistory, setChannelHistory] = useState<ChannelHistoryItem[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true); // Show by default
+  
+  // Local storage for known channels
+  const STORAGE_KEY = 'drain_channels';
   
   // Provider/Model state
   const [selectedProvider, setSelectedProvider] = useState(PROVIDERS[0]);
@@ -358,6 +361,34 @@ export default function Home() {
   }, [chainId, address, demoMode]);
 
   // ============================================================================
+  // LOCAL STORAGE FOR CHANNELS
+  // ============================================================================
+
+  const saveChannelToStorage = (channelId: string, provider: string) => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const channels: { id: string; provider: string; savedAt: number }[] = stored ? JSON.parse(stored) : [];
+      
+      // Don't add duplicates
+      if (!channels.find(c => c.id === channelId)) {
+        channels.push({ id: channelId, provider, savedAt: Date.now() });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(channels));
+      }
+    } catch (e) {
+      console.error('Failed to save channel to storage:', e);
+    }
+  };
+
+  const getStoredChannels = (): { id: string; provider: string }[] => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  // ============================================================================
   // CHANNEL HISTORY
   // ============================================================================
 
@@ -406,12 +437,31 @@ export default function Home() {
       const json = await response.json();
       const logs = json.result || [];
       
-      // Parse each log and check channel status
-      const channels: ChannelHistoryItem[] = [];
+      // Collect channel IDs from events
+      const channelIdsFromEvents = new Set<string>();
+      const providerMap = new Map<string, string>();
       
       for (const log of logs) {
         const channelId = log.topics[1];
-        const provider = '0x' + log.topics[3].slice(26); // Extract provider from topic3
+        const provider = '0x' + log.topics[3].slice(26);
+        channelIdsFromEvents.add(channelId);
+        providerMap.set(channelId, provider);
+      }
+      
+      // Also add locally stored channels (in case events are too old)
+      const storedChannels = getStoredChannels();
+      for (const stored of storedChannels) {
+        channelIdsFromEvents.add(stored.id);
+        if (!providerMap.has(stored.id)) {
+          providerMap.set(stored.id, stored.provider);
+        }
+      }
+      
+      // Parse each channel and check status
+      const channels: ChannelHistoryItem[] = [];
+      
+      for (const channelId of channelIdsFromEvents) {
+        const provider = providerMap.get(channelId) || '0x0000000000000000000000000000000000000000';
         
         // Get current channel state
         const channelData = await getChannelState(channelId);
@@ -420,6 +470,11 @@ export default function Home() {
           const now = Math.floor(Date.now() / 1000);
           const isExpired = now >= channelData.expiry;
           const isClosed = channelData.consumer === '0x0000000000000000000000000000000000000000';
+          
+          // Only show channels for this user
+          if (channelData.consumer.toLowerCase() !== userAddress.toLowerCase() && !isClosed) {
+            continue;
+          }
           
           let status: 'active' | 'expired' | 'closed';
           if (isClosed) {
@@ -442,8 +497,14 @@ export default function Home() {
         }
       }
       
-      // Sort by expiry (newest first)
-      channels.sort((a, b) => b.expiry - a.expiry);
+      // Sort by expiry (newest first), but active first
+      channels.sort((a, b) => {
+        if (a.status === 'active' && b.status !== 'active') return -1;
+        if (b.status === 'active' && a.status !== 'active') return 1;
+        if (a.status === 'expired' && b.status === 'closed') return -1;
+        if (b.status === 'expired' && a.status === 'closed') return 1;
+        return b.expiry - a.expiry;
+      });
       
       setChannelHistory(channels);
     } catch (e) {
@@ -657,12 +718,16 @@ export default function Home() {
       
       const channelId = openedEvent.topics[1];
       
+      // Save to localStorage for history tracking
+      saveChannelToStorage(channelId, selectedProvider.address);
+      
       setChannel({
         id: channelId,
         deposit: amount,
         claimed: 0n,
         expiry: Math.floor(Date.now() / 1000) + Number(duration),
         spent: 0n,
+        provider: selectedProvider.address,
       });
       
       setMessages([{
@@ -1471,11 +1536,16 @@ export default function Home() {
                       isLoading={isLoading}
                       onClose={closeChannel}
                       onExit={() => {
+                        // Save channel ID to show in history
+                        if (address) {
+                          fetchChannelHistory(address);
+                        }
                         setChannel(null);
                         setMessages([]);
                         setVoucherNonce(0);
                         setPreSignedVouchers([]);
                         setUsedVoucherIndex(0);
+                        setShowHistory(true); // Show history panel
                       }}
                     />
                   )}
