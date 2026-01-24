@@ -199,9 +199,11 @@ drain/
     └── src/app/page.tsx        # Next.js frontend
 ```
 
-## MCP Server (Agent-to-Agent)
+## MCP Server (Agent-to-Agent) ✅ **VERIFIED**
 
 DRAIN includes an MCP (Model Context Protocol) server that enables AI agents to autonomously pay for AI services.
+
+**✅ Successfully tested with Claude Desktop** - An AI agent autonomously opened a $0.10 channel and made AI inference requests, proving the agent-to-agent payment economy works without human intervention.
 
 ```bash
 npm install -g drain-mcp
@@ -352,7 +354,7 @@ Features:
 | Component               | Status         |
 | ----------------------- | -------------- |
 | Smart Contract          | ✅ Complete    |
-| Test Suite (47 tests)   | ✅ Complete    |
+| Test Suite (47 tests)   | ✅ Complete (verified) |
 | OpenZeppelin ECDSA      | ✅ Integrated  |
 | Testnet Deployment      | ✅ Live on Amoy |
 | **Mainnet Deployment**  | ✅ **LIVE** |
@@ -361,7 +363,7 @@ Features:
 | **Demo Website**        | ✅ **[Live Demo](https://believable-inspiration-production-b1c6.up.railway.app/)** |
 | **Provider Directory**  | ✅ **[Live](https://believable-inspiration-production-b1c6.up.railway.app/directory)** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
-| **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** |
+| **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** | **Agent-to-Agent Tested** |
 
 ### Deployed Contracts
 
