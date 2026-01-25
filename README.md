@@ -466,7 +466,7 @@ No. Open a new channel instead. This keeps the protocol simple and avoids edge c
 
 ## Related Projects
 
-- **DRAIN Marketplace**: [Provider Discovery & Registration](https://github.com/kimbo128/DRAIN-marketplace) - Separate repository for provider directory and marketplace features
+- **DRAIN Marketplace**: [Provider Discovery & Registration](https://github.com/kimbo128/DRAIN-marketplace-landing) - Public marketplace information and provider directory
 - **MCP Server**: [npm package](https://www.npmjs.com/package/drain-mcp) - Published npm package for AI agent integration
 - **Reference Provider**: [Live API](https://drain-production-a9d4.up.railway.app) - Example DRAIN-compatible provider
 
