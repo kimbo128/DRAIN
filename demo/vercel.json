@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/directory/health",
-      "schedule": "*/5 * * * *"
-    }
-  ]
-}
