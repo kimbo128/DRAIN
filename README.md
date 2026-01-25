@@ -358,7 +358,7 @@ Try DRAIN without writing code:
 | **Reference Provider**  | ✅ **Available** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
 | **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** | **Agent-to-Agent Tested** |
-| **Marketplace**         | ✅ **[Separate Repo](https://github.com/kimbo128/DRAIN-marketplace)** | Provider Discovery |
+| **Marketplace**         | ✅ **[Separate Repo](https://github.com/kimbo128/DRAIN-marketplace-landing)** | Provider Discovery |
 
 ### Deployed Contracts
 
