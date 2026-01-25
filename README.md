@@ -325,11 +325,12 @@ See [`provider/README.md`](./provider/README.md) for full documentation.
 
 DRAIN is a permissionless protocol - anyone can be a provider. For provider discovery:
 
-- **Marketplace**: [DRAIN Marketplace](https://github.com/kimbo128/DRAIN-marketplace) - Browse and register providers
+- **Marketplace**: [DRAIN Marketplace Landing](https://github.com/kimbo128/DRAIN-marketplace-landing) - Public information and provider directory
+- **Live Marketplace**: https://believable-inspiration-production-b1c6.up.railway.app/directory - Browse and register providers
 - **MCP Server**: Automatically discovers providers via marketplace API
 - **Direct Integration**: Use provider addresses directly (no marketplace required)
 
-**Note**: The marketplace is optional. DRAIN protocol works standalone - you can use any provider address directly without marketplace registration.
+**Note**: The marketplace is optional and separate from the protocol. DRAIN protocol works standalone - you can use any provider address directly without marketplace registration. The marketplace code is in a private repository for business reasons.
 
 ## Demo & Examples
 
