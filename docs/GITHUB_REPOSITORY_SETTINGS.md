@@ -34,20 +34,30 @@ This document outlines the recommended GitHub repository settings for profession
 
 ---
 
-## DRAIN Marketplace Repository
+## DRAIN Marketplace Repository (PRIVATE)
 
 **Repository**: https://github.com/kimbo128/DRAIN-marketplace
+
+**Status**: ✅ **PRIVATE** - Business code and logic are protected
+
+**Note**: This repository is private for business reasons. For public information, see the Marketing Repository below.
+
+---
+
+## DRAIN Marketplace Landing (PUBLIC)
+
+**Repository**: https://github.com/kimbo128/DRAIN-marketplace-landing
 
 ### Settings to Update
 
 1. **Description**:
    ```
-   Provider Marketplace for DRAIN Protocol - Discover and register AI providers
+   DRAIN Marketplace - Provider Directory & Discovery Platform for DRAIN Protocol
    ```
 
 2. **Topics** (comma-separated):
    ```
-   marketplace, provider-directory, drain-protocol, nextjs, ai-providers, provider-discovery, web3, polygon
+   marketplace, provider-directory, drain-protocol, ai-providers, provider-discovery, web3, polygon
    ```
 
 3. **Website**:
@@ -57,7 +67,7 @@ This document outlines the recommended GitHub repository settings for profession
 
 ### How to Update
 
-1. Go to https://github.com/kimbo128/DRAIN-marketplace/settings
+1. Go to https://github.com/kimbo128/DRAIN-marketplace-landing/settings
 2. Scroll to "General" section
 3. Update "Description" field
 4. Scroll to "Topics" section
