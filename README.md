@@ -22,7 +22,7 @@ DRAIN fills this gap: **stablecoin micropayments without tokens, complexity, or 
 | Problem | DRAIN Solution |
 |---------|----------------|
 | Token volatility | USDC-only, predictable pricing |
-| High fees | $0.02 per tx on Polygon |
+| High fees | ~$0.02 per tx on Polygon (varies: $0.015-0.025) |
 | AI agents can't pay | First-class programmatic support |
 | Credit card barriers | Permissionless crypto access |
 
@@ -79,15 +79,15 @@ DRAIN is like a **prepaid card for AI**: deposit USDC, use it across requests, w
 
 ### Consumer Flow
 
-1. **Open Channel**: Deposit USDC for a specific provider and duration (~$0.02 gas)
-2. **Use Service**: Send requests with signed vouchers (free, off-chain)
-3. **Close Channel**: Withdraw unused USDC after expiry (~$0.02 gas)
+1. **Open Channel**: Deposit USDC for a specific provider and duration (~$0.02 gas, ~5 sec finality)
+2. **Use Service**: Send requests with signed vouchers (free, off-chain, $0.000005 per request)
+3. **Close Channel**: Withdraw unused USDC after expiry (~$0.02 gas, ~5 sec finality)
 
 ### Provider Flow
 
 1. **Receive Request**: Validate voucher signature and amount
 2. **Deliver Service**: Return AI response
-3. **Claim Payment**: Submit highest voucher to get paid (~$0.02 gas)
+3. **Claim Payment**: Submit highest voucher to get paid (~$0.02 gas, ~5 sec finality)
 
 ### Channel Duration & Provider Protection
 
@@ -117,7 +117,7 @@ Provider only needs to claim the **last** voucher to receive full payment.
 
 | Asset | Network | Why |
 |-------|---------|-----|
-| **USDC** | Polygon | Stable ($1), liquid ($500M+), low fees ($0.02/tx) |
+| **USDC** | Polygon | Stable ($1), liquid ($500M+), low fees (~$0.02/tx, varies: $0.015-0.025) |
 
 USDC on Polygon can be bridged from Ethereum, Base, Arbitrum via [Circle CCTP](https://www.circle.com/en/cross-chain-transfer-protocol).
 
@@ -169,6 +169,14 @@ Consumer signs vouchers off-chain. Provider submits latest voucher to claim paym
 
 Total overhead: **<$0.05** per session regardless of usage.
 
+**Minimum Deposit Recommendations:**
+- **$0.10**: Testing (40% gas overhead, ~100 messages)
+- **$0.50**: Recommended minimum (8% gas overhead, ~500 messages)
+- **$1.00**: Optimal (4% gas overhead, ~1000 messages)
+- **$5.00**: Best value (0.8% gas overhead, ~5000 messages)
+
+See [Test Results](docs/AGENT_TEST_RESULTS.md) for verified cost data.
+
 ## What DRAIN Is NOT
 
 | ❌ | Why |
@@ -204,6 +212,8 @@ drain/
 DRAIN includes an MCP (Model Context Protocol) server that enables AI agents to autonomously pay for AI services.
 
 **✅ Successfully tested with Claude Desktop** - An AI agent autonomously opened a $0.10 channel and made AI inference requests, proving the agent-to-agent payment economy works without human intervention.
+
+**Test Results**: $0.000005 per request, 20,000 requests possible with $0.10 channel. See [Test Results](docs/AGENT_TEST_RESULTS.md) and [Comparison with Credit Cards](docs/COMPARISON.md) for detailed metrics.
 
 ```bash
 npm install -g drain-mcp
@@ -310,25 +320,6 @@ X-DRAIN-Remaining: 9841750
 
 See [`provider/README.md`](./provider/README.md) for full documentation.
 
-## Provider Directory
-
-**🟢 Live Directory:** https://believable-inspiration-production-b1c6.up.railway.app/directory
-
-Discover and register DRAIN-compatible AI providers:
-
-- **Marketplace** – Browse approved providers with live status
-- **Register** – Submit your provider for review
-- **Admin** – Approve/reject providers (admin only)
-
-### API for MCP Integration
-
-```bash
-# Get all approved providers (MCP-friendly format)
-curl https://your-demo.railway.app/api/mcp/providers
-```
-
-Response includes provider info, models, pricing, and live status for the DRAIN MCP Server.
-
 ## Demo Application
 
 **🟢 Live Demo:** https://believable-inspiration-production-b1c6.up.railway.app
@@ -337,8 +328,8 @@ Try DRAIN without writing code:
 
 1. **Connect Wallet** – MetaMask on Polygon Mainnet
 2. **Choose Provider & Model** – Select from available AI models
-3. **Open Channel** – Deposit USDC ($0.50 - $100)
-4. **Chat** – Each message signs a voucher and calls the real AI
+3. **Open Channel** – Deposit USDC ($0.10 minimum recommended)
+4. **Chat** – Each message signs a voucher and calls the real AI ($0.000005 per request)
 5. **Close Channel** – Get unused USDC refunded
 
 Features:
@@ -347,7 +338,7 @@ Features:
 - Live API calls to the DRAIN provider
 - Real-time cost tracking per message
 
-**Demo Mode** available for testing without real funds.
+**Note**: The marketplace and provider directory have been moved to a separate repository. See [Marketplace Repository](https://github.com/kimbo128/DRAIN-marketplace) for provider discovery and registration.
 
 ## Development Status
 
@@ -395,12 +386,13 @@ forge coverage           # Line coverage
 
 | Chain   | Tx Cost | Finality | USDC Liquidity |
 | ------- | ------- | -------- | -------------- |
-| Polygon | ~$0.02  | 5 sec    | $500M+ native  |
+| Polygon | ~$0.02 (varies: $0.015-0.025) | 5 sec    | $500M+ native  |
 
 **Why Polygon?**
 - Native USDC with Circle CCTP bridging
-- 5-second finality enables 10-minute challenge periods
+- 5-second finality enables 10-minute challenge periods (300 blocks)
 - Proven infrastructure, no reorgs
+- Low gas costs (~$0.02 per transaction)
 
 Future chains via CREATE2 for identical addresses.
 
@@ -433,7 +425,7 @@ No. Channels have a fixed duration (e.g., 24h) to protect providers. After expir
 <details>
 <summary><strong>When should providers claim?</strong></summary>
 
-Recommended: when accumulated earnings exceed ~$10 (to amortize $0.02 gas). Providers can claim **at any time** – before, during, or after channel expiry.
+Recommended: when accumulated earnings exceed ~$10 (to amortize ~$0.02 gas). Providers can claim **at any time** – before, during, or after channel expiry.
 </details>
 
 <details>
