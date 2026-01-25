@@ -203,8 +203,9 @@ drain/
 ├── mcp/                        # MCP Server for AI Agents
 │   ├── src/index.ts            # MCP server entry point
 │   └── src/tools/              # drain_chat, drain_balance, etc.
-└── demo/                       # Marketplace & Demo
-    └── src/app/page.tsx        # Next.js frontend
+└── demo/                       # AI-optimized examples
+    ├── README.md               # Quick start for AI agents
+    └── simple-demo.ts          # Minimal code example
 ```
 
 ## MCP Server (Agent-to-Agent) ✅ **VERIFIED**
@@ -320,25 +321,28 @@ X-DRAIN-Remaining: 9841750
 
 See [`provider/README.md`](./provider/README.md) for full documentation.
 
-## Demo Application
+## Provider Discovery
 
-**🟢 Live Demo:** https://believable-inspiration-production-b1c6.up.railway.app
+DRAIN is a permissionless protocol - anyone can be a provider. For provider discovery:
+
+- **Marketplace**: [DRAIN Marketplace](https://github.com/kimbo128/DRAIN-marketplace) - Browse and register providers
+- **MCP Server**: Automatically discovers providers via marketplace API
+- **Direct Integration**: Use provider addresses directly (no marketplace required)
+
+**Note**: The marketplace is optional. DRAIN protocol works standalone - you can use any provider address directly without marketplace registration.
+
+## Demo & Examples
+
+**Quick Start for AI Agents**: See [`demo/README.md`](./demo/README.md) for machine-readable examples.
+
+**Live Demo**: https://believable-inspiration-production-b1c6.up.railway.app
 
 Try DRAIN without writing code:
-
 1. **Connect Wallet** – MetaMask on Polygon Mainnet
 2. **Choose Provider & Model** – Select from available AI models
 3. **Open Channel** – Deposit USDC ($0.10 minimum recommended)
 4. **Chat** – Each message signs a voucher and calls the real AI ($0.000005 per request)
 5. **Close Channel** – Get unused USDC refunded
-
-Features:
-- Real blockchain transactions (USDC approval, channel open/close)
-- EIP-712 voucher signing with MetaMask
-- Live API calls to the DRAIN provider
-- Real-time cost tracking per message
-
-**Note**: The marketplace and provider directory have been moved to a separate repository. See [Marketplace Repository](https://github.com/kimbo128/DRAIN-marketplace) for provider discovery and registration.
 
 ## Development Status
 
@@ -351,10 +355,9 @@ Features:
 | **Mainnet Deployment**  | ✅ **LIVE** |
 | **TypeScript SDK**      | ✅ **Available** |
 | **Reference Provider**  | ✅ **Available** |
-| **Demo Website**        | ✅ **[Live Demo](https://believable-inspiration-production-b1c6.up.railway.app/)** |
-| **Provider Directory**  | ✅ **[Live](https://believable-inspiration-production-b1c6.up.railway.app/directory)** |
 | **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
 | **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** | **Agent-to-Agent Tested** |
+| **Marketplace**         | ✅ **[Separate Repo](https://github.com/kimbo128/DRAIN-marketplace)** | Provider Discovery |
 
 ### Deployed Contracts
 
@@ -460,10 +463,15 @@ Channel Open → Provider can claim (anytime) → Channel Expiry → Consumer ca
 No. Open a new channel instead. This keeps the protocol simple and avoids edge cases.
 </details>
 
+## Related Projects
+
+- **DRAIN Marketplace**: [Provider Discovery & Registration](https://github.com/kimbo128/DRAIN-marketplace) - Separate repository for provider directory and marketplace features
+- **MCP Server**: [npm package](https://www.npmjs.com/package/drain-mcp) - Published npm package for AI agent integration
+- **Reference Provider**: [Live API](https://drain-production-a9d4.up.railway.app) - Example DRAIN-compatible provider
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for guidelines.
-
 
 ## License
 
