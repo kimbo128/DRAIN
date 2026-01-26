@@ -121,6 +121,37 @@ Provider only needs to claim the **last** voucher to receive full payment.
 
 USDC on Polygon can be bridged from Ethereum, Base, Arbitrum via [Circle CCTP](https://www.circle.com/en/cross-chain-transfer-protocol).
 
+## 🏪 DRAIN Marketplace
+
+<div align="center">
+  <strong>
+    <a href="https://believable-inspiration-production-b1c6.up.railway.app">🚀 Launch Marketplace</a>
+  </strong>
+</div>
+
+<br/>
+
+The DRAIN Marketplace is the gateway to the agent-to-agent economy:
+
+| Feature | Description |
+|---------|-------------|
+| **Provider Directory** | Browse all registered AI providers with real-time status |
+| **One-Click Payments** | Open channels, chat with AI, pay in USDC |
+| **Model Selection** | Choose from multiple models per provider |
+| **Search & Filter** | Find providers by name, model, or capability |
+| **No Account Required** | Just connect your wallet and start |
+
+**🔗 Links:**
+- **Live App**: [believable-inspiration-production-b1c6.up.railway.app](https://believable-inspiration-production-b1c6.up.railway.app)
+- **Provider Directory**: [/directory](https://believable-inspiration-production-b1c6.up.railway.app/directory)
+- **Marketing Page**: [github.com/kimbo128/DRAIN-marketplace-landing](https://github.com/kimbo128/DRAIN-marketplace-landing)
+
+**For Providers:** Register your AI service and get discovered by autonomous agents worldwide.
+
+**For Users:** Pay for AI with crypto - no credit card, no subscription, no minimums.
+
+---
+
 ## Protocol Specification
 
 DRAIN defines three components:
@@ -323,14 +354,15 @@ See [`provider/README.md`](./provider/README.md) for full documentation.
 
 ## Provider Discovery
 
-DRAIN is a permissionless protocol - anyone can be a provider. For provider discovery:
+DRAIN is a permissionless protocol - anyone can be a provider. Multiple discovery options:
 
-- **Marketplace**: [DRAIN Marketplace Landing](https://github.com/kimbo128/DRAIN-marketplace-landing) - Public information and provider directory
-- **Live Marketplace**: https://believable-inspiration-production-b1c6.up.railway.app/directory - Browse and register providers
-- **MCP Server**: Automatically discovers providers via marketplace API
-- **Direct Integration**: Use provider addresses directly (no marketplace required)
+| Method | Best For | Link |
+|--------|----------|------|
+| **DRAIN Marketplace** | Humans browsing providers | [Launch App](https://believable-inspiration-production-b1c6.up.railway.app/directory) |
+| **MCP Server** | AI agents (auto-discovery) | [npm package](https://www.npmjs.com/package/drain-mcp) |
+| **Direct Address** | Known provider integration | Use provider wallet address |
 
-**Note**: The marketplace is optional and separate from the protocol. DRAIN protocol works standalone - you can use any provider address directly without marketplace registration. The marketplace code is in a private repository for business reasons.
+The marketplace is **optional** - DRAIN protocol works standalone with any provider address.
 
 ## Demo & Examples
 
@@ -347,18 +379,14 @@ Try DRAIN without writing code:
 
 ## Development Status
 
-| Component               | Status         |
-| ----------------------- | -------------- |
-| Smart Contract          | ✅ Complete    |
-| Test Suite (47 tests)   | ✅ Complete (verified) |
-| OpenZeppelin ECDSA      | ✅ Integrated  |
-| Testnet Deployment      | ✅ Live on Amoy |
-| **Mainnet Deployment**  | ✅ **LIVE** |
-| **TypeScript SDK**      | ✅ **Available** |
-| **Reference Provider**  | ✅ **Available** |
-| **Live Provider**       | ✅ **[Online](https://drain-production-a9d4.up.railway.app/v1/pricing)** |
-| **MCP Server**          | ✅ **[npm](https://www.npmjs.com/package/drain-mcp)** | **Agent-to-Agent Tested** |
-| **Marketplace**         | ✅ **[Separate Repo](https://github.com/kimbo128/DRAIN-marketplace-landing)** | Provider Discovery |
+| Component               | Status         | Link |
+| ----------------------- | -------------- | ---- |
+| Smart Contract          | ✅ Complete    | [polygonscan](https://polygonscan.com/address/0x1C1918C99b6DcE977392E4131C91654d8aB71e64) |
+| Test Suite (47 tests)   | ✅ Complete | `contracts/test/` |
+| TypeScript SDK          | ✅ Available | `sdk/` |
+| Reference Provider      | ✅ Online | [Railway](https://drain-production-a9d4.up.railway.app/v1/pricing) |
+| MCP Server              | ✅ Published | [npm](https://www.npmjs.com/package/drain-mcp) |
+| **🏪 Marketplace**      | ✅ **LIVE** | **[Launch App](https://believable-inspiration-production-b1c6.up.railway.app)** |
 
 ### Deployed Contracts
 
@@ -466,9 +494,12 @@ No. Open a new channel instead. This keeps the protocol simple and avoids edge c
 
 ## Related Projects
 
-- **DRAIN Marketplace**: [Provider Discovery & Registration](https://github.com/kimbo128/DRAIN-marketplace-landing) - Public marketplace information and provider directory
-- **MCP Server**: [npm package](https://www.npmjs.com/package/drain-mcp) - Published npm package for AI agent integration
-- **Reference Provider**: [Live API](https://drain-production-a9d4.up.railway.app) - Example DRAIN-compatible provider
+| Project | Description | Link |
+|---------|-------------|------|
+| **🏪 DRAIN Marketplace** | Live app for provider discovery & payments | [Launch](https://believable-inspiration-production-b1c6.up.railway.app) |
+| **Marketplace Info** | Public marketing & documentation | [GitHub](https://github.com/kimbo128/DRAIN-marketplace-landing) |
+| **MCP Server** | AI agent integration (Claude, Cursor) | [npm](https://www.npmjs.com/package/drain-mcp) |
+| **Reference Provider** | Live DRAIN-compatible AI provider | [API](https://drain-production-a9d4.up.railway.app) |
 
 ## Contributing
 
