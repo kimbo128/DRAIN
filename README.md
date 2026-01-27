@@ -13,6 +13,37 @@ An open protocol for trustless, streaming micropayments between AI consumers and
 
 ---
 
+<div align="center">
+
+### ⚡ Open once. Use forever. Pay only for what you use.
+
+</div>
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           1000 AI REQUESTS                                   ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║   DRAIN              │  Per-Request Payments (x402, etc.)                    ║
+║   ─────              │  ────────────────────────────────                     ║
+║   2 transactions     │  1000 transactions                                    ║
+║   ~$0.04 gas         │  ~$20+ gas                                            ║
+║   0ms latency        │  2-5 sec per request                                  ║
+║   1 wallet popup     │  1000 wallet popups (or API key)                      ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
+<div align="center">
+
+| 🏦 **2 On-Chain TXs** | ⚡ **Zero Latency** | 💸 **~$0.04 Total Gas** | 🔐 **No API Keys** |
+|:---:|:---:|:---:|:---:|
+| Open + Close only | Off-chain vouchers | 500x cheaper at scale | Cryptographic auth |
+
+</div>
+
+---
+
 ## Why DRAIN?
 
 Existing decentralized AI protocols require holding volatile tokens, creating speculation dynamics that overwhelm utility. Meanwhile, **78% of the world lacks credit cards**, and AI agents can't have bank accounts.
