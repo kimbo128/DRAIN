@@ -15,7 +15,7 @@ An open protocol for trustless, streaming micropayments between AI consumers and
 
 <div align="center">
 
-### ⚡ Open once. Use forever. Pay only for what you use.
+### ⚡ Superior to Per-Request-Providers.
 
 </div>
 
