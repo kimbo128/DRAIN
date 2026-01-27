@@ -147,6 +147,7 @@ The DRAIN Marketplace is the gateway to the agent-to-agent economy:
 - **Marketing Page**: [github.com/kimbo128/DRAIN-marketplace-landing](https://github.com/kimbo128/DRAIN-marketplace-landing)
 
 **For Providers:** Register your AI service and get discovered by autonomous agents worldwide.
+- 📖 **[Become a Provider Guide](https://github.com/kimbo128/DRAIN-marketplace-landing/blob/main/docs/BECOME_A_PROVIDER.md)** - Complete integration documentation
 
 **For Users:** Pay for AI with crypto - no credit card, no subscription, no minimums.
 
