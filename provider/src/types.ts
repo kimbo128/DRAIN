@@ -34,6 +34,8 @@ export interface ProviderConfig {
   claimThreshold: bigint;
   /** Path to voucher storage file */
   storagePath: string;
+  /** Admin API Key for protected endpoints */
+  adminKey: string;
 }
 
 /**
