@@ -26,6 +26,8 @@ const openai = new OpenAI({ apiKey: config.openaiApiKey });
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Behind proxy (e.g. Railway/AWS), trust the X-Forwarded-For header
+app.set('trust proxy', 1);
 
 // Security: Admin Authentication
 const adminAuth = createAdminMiddleware(config.adminKey);

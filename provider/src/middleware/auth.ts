@@ -13,24 +13,37 @@ export function createAdminMiddleware(adminKey: string) {
         try {
             const authHeader = req.headers.authorization;
 
+            const logAttempt = (reason: string) => {
+                console.warn(
+                    `[Suspicious] ${reason}. Method: ${req.method}, Path: ${req.originalUrl}, IP: ${req.ip}, UA: ${req.get('User-Agent')}`
+                );
+            };
+
             // Fail fast if no header
             if (!authHeader) {
-                console.warn(`[Suspicious] Admin access attempt without auth header from ${req.ip}`);
+                logAttempt('Missing Authorization header');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            // Check format "Bearer <token>"
-            if (!authHeader.startsWith('Bearer ')) {
-                console.warn(`[Suspicious] Admin access attempt with invalid auth format from ${req.ip}`);
+            // Robust parsing: split by first space
+            // Expect standard format "Bearer <token>"
+            const parts = authHeader.split(' ');
+            if (parts.length !== 2 || parts[0] !== 'Bearer') {
+                logAttempt('Invalid Auth format');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
-            const token = authHeader.split(' ')[1];
+            const token = parts[1];
+            if (!token) {
+                logAttempt('Empty token');
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+
             const tokenBuffer = Buffer.from(token);
 
             // Check length match first (timingSafeEqual requires equal length)
             if (tokenBuffer.length !== adminKeyBuffer.length) {
-                console.warn(`[Suspicious] Admin access attempt with wrong key length from ${req.ip}`);
+                logAttempt('Invalid key length');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
@@ -38,7 +51,7 @@ export function createAdminMiddleware(adminKey: string) {
             const isValid = crypto.timingSafeEqual(tokenBuffer, adminKeyBuffer);
 
             if (!isValid) {
-                console.warn(`[Suspicious] Admin access attempt with invalid key from ${req.ip}`);
+                logAttempt('Invalid key signature');
                 return res.status(401).json({ error: 'Unauthorized' });
             }
 
