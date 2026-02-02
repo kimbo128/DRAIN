@@ -12,6 +12,7 @@ import { DrainService } from './drain.js';
 import { VoucherStorage } from './storage.js';
 import type { ProviderConfig } from './types.js';
 import { formatUnits } from 'viem';
+import { createAdminMiddleware } from './middleware/auth.js';
 
 // Load configuration
 const config = loadConfig();
@@ -25,6 +26,12 @@ const openai = new OpenAI({ apiKey: config.openaiApiKey });
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Behind proxy (e.g. Railway/AWS), trust the X-Forwarded-For header
+app.set('trust proxy', 1);
+
+// Security: Admin Authentication
+const adminAuth = createAdminMiddleware(config.adminKey);
+app.use('/v1/admin', adminAuth);
 
 /**
  * GET /v1/pricing
@@ -32,7 +39,7 @@ app.use(express.json());
  */
 app.get('/v1/pricing', (req, res) => {
   const pricing: Record<string, { inputPer1kTokens: string; outputPer1kTokens: string }> = {};
-  
+
   for (const model of getSupportedModels(config)) {
     const modelPricing = getModelPricing(config, model);
     if (modelPricing) {
@@ -76,7 +83,7 @@ app.get('/v1/models', (req, res) => {
  */
 app.post('/v1/chat/completions', async (req, res) => {
   const voucherHeader = req.headers['x-drain-voucher'] as string | undefined;
-  
+
   // 1. Check voucher header present
   if (!voucherHeader) {
     res.status(402).set({
@@ -130,17 +137,17 @@ app.post('/v1/chat/completions', async (req, res) => {
 
   // 5. Validate voucher with estimated cost
   const validation = await drainService.validateVoucher(voucher, estimatedMinCost);
-  
+
   if (!validation.valid) {
     const errorHeaders: Record<string, string> = {
       'X-DRAIN-Error': validation.error!,
     };
-    
+
     if (validation.error === 'insufficient_funds' && validation.channel) {
       errorHeaders['X-DRAIN-Required'] = estimatedMinCost.toString();
       errorHeaders['X-DRAIN-Provided'] = (BigInt(voucher.amount) - validation.channel.totalCharged).toString();
     }
-    
+
     res.status(402).set(errorHeaders).json({
       error: {
         message: `Payment validation failed: ${validation.error}`,
@@ -195,7 +202,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 
       // Calculate final cost
       const actualCost = calculateCost(pricing, inputTokens, outputTokens);
-      
+
       // Store voucher with actual cost
       drainService.storeVoucher(voucher, channelState, actualCost);
 
@@ -205,7 +212,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.write(`: X-DRAIN-Cost: ${actualCost.toString()}\n`);
       res.write(`: X-DRAIN-Total: ${(channelState.totalCharged + actualCost).toString()}\n`);
       res.write(`: X-DRAIN-Remaining: ${remaining.toString()}\n`);
-      
+
       res.end();
     } else {
       // === NON-STREAMING RESPONSE ===
@@ -220,7 +227,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 
       // Verify voucher covers actual cost
       const actualValidation = await drainService.validateVoucher(voucher, actualCost);
-      
+
       if (!actualValidation.valid) {
         // This shouldn't happen if pre-auth worked, but handle it
         res.status(402).set({
@@ -252,7 +259,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     }
   } catch (error) {
     console.error('OpenAI API error:', error);
-    
+
     const message = error instanceof Error ? error.message : 'OpenAI API error';
     res.status(500).json({
       error: {
@@ -310,7 +317,7 @@ app.get('/v1/admin/stats', (req, res) => {
 app.get('/v1/admin/vouchers', (req, res) => {
   const unclaimed = storage.getUnclaimedVouchers();
   const highest = storage.getHighestVoucherPerChannel();
-  
+
   res.json({
     provider: drainService.getProviderAddress(),
     unclaimedCount: unclaimed.length,
