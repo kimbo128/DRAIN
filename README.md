@@ -152,35 +152,49 @@ Provider only needs to claim the **last** voucher to receive full payment.
 
 USDC on Polygon can be bridged from Ethereum, Base, Arbitrum via [Circle CCTP](https://www.circle.com/en/cross-chain-transfer-protocol).
 
-## 🏪 DRAIN Marketplace
+## Handshake58 Marketplace
 
-<div align="center">
-  <strong>
-    <a href="https://believable-inspiration-production-b1c6.up.railway.app">🚀 Launch Marketplace</a>
-  </strong>
-</div>
+The official DRAIN marketplace is **Handshake58** - a provider directory where AI agents can discover and pay for AI inference.
 
-<br/>
+| Link | Description |
+|------|-------------|
+| **https://www.handshake58.com** | Main marketplace |
+| **https://www.handshake58.com/for-agents** | Quick start for AI agents |
+| **https://www.handshake58.com/api/mcp/providers** | Provider discovery API |
 
-The DRAIN Marketplace is the gateway to the agent-to-agent economy:
+### For AI Agents
 
-| Feature | Description |
-|---------|-------------|
-| **Provider Directory** | Browse all registered AI providers with real-time status |
-| **One-Click Payments** | Open channels, chat with AI, pay in USDC |
-| **Model Selection** | Choose from multiple models per provider |
-| **Search & Filter** | Find providers by name, model, or capability |
-| **No Account Required** | Just connect your wallet and start |
+Install the MCP Server and start using AI with crypto payments:
 
-**🔗 Links:**
-- **Live App**: [believable-inspiration-production-b1c6.up.railway.app](https://believable-inspiration-production-b1c6.up.railway.app)
-- **Provider Directory**: [/directory](https://believable-inspiration-production-b1c6.up.railway.app/directory)
-- **Marketing Page**: [github.com/kimbo128/DRAIN-marketplace-landing](https://github.com/kimbo128/DRAIN-marketplace-landing)
+```bash
+npm install -g drain-mcp
+```
 
-**For Providers:** Register your AI service and get discovered by autonomous agents worldwide.
-- 📖 **[Become a Provider Guide](https://github.com/kimbo128/DRAIN-marketplace-landing/blob/main/docs/BECOME_A_PROVIDER.md)** - Complete integration documentation
+Configure in Claude Desktop or Cursor:
 
-**For Users:** Pay for AI with crypto - no credit card, no subscription, no minimums.
+```json
+{
+  "mcpServers": {
+    "drain": {
+      "command": "drain-mcp",
+      "env": {
+        "DRAIN_PRIVATE_KEY": "your-polygon-wallet-key"
+      }
+    }
+  }
+}
+```
+
+That's it! The MCP server auto-discovers providers from Handshake58.
+
+### Agent-Oriented Endpoints
+
+| URL | Purpose |
+|-----|---------|
+| `/for-agents` | Static, crawlable agent page |
+| `/api/agent` | Quick discovery JSON |
+| `/llms.txt` | 25-line agent instruction |
+| `/skill.md` | Full documentation (MCP first) |
 
 ---
 
@@ -390,7 +404,7 @@ DRAIN is a permissionless protocol - anyone can be a provider. Multiple discover
 
 | Method | Best For | Link |
 |--------|----------|------|
-| **DRAIN Marketplace** | Humans browsing providers | [Launch App](https://believable-inspiration-production-b1c6.up.railway.app/directory) |
+| **Handshake58** | Humans browsing providers | [Launch App](https://www.handshake58.com) |
 | **MCP Server** | AI agents (auto-discovery) | [npm package](https://www.npmjs.com/package/drain-mcp) |
 | **Direct Address** | Known provider integration | Use provider wallet address |
 
@@ -400,7 +414,7 @@ The marketplace is **optional** - DRAIN protocol works standalone with any provi
 
 **Quick Start for AI Agents**: See [`demo/README.md`](./demo/README.md) for machine-readable examples.
 
-**Live Demo**: https://believable-inspiration-production-b1c6.up.railway.app
+**Live Demo**: https://www.handshake58.com
 
 Try DRAIN without writing code:
 1. **Connect Wallet** – MetaMask on Polygon Mainnet
@@ -418,7 +432,7 @@ Try DRAIN without writing code:
 | TypeScript SDK          | ✅ Available | `sdk/` |
 | Reference Provider      | ✅ Online | [Railway](https://drain-production-a9d4.up.railway.app/v1/pricing) |
 | MCP Server              | ✅ Published | [npm](https://www.npmjs.com/package/drain-mcp) |
-| **🏪 Marketplace**      | ✅ **LIVE** | **[Launch App](https://believable-inspiration-production-b1c6.up.railway.app)** |
+| **Handshake58**         | ✅ **LIVE** | **[Launch App](https://www.handshake58.com)** |
 
 ### Deployed Contracts
 
@@ -528,8 +542,9 @@ No. Open a new channel instead. This keeps the protocol simple and avoids edge c
 
 | Project | Description | Link |
 |---------|-------------|------|
-| **🏪 DRAIN Marketplace** | Live app for provider discovery & payments | [Launch](https://believable-inspiration-production-b1c6.up.railway.app) |
-| **Marketplace Info** | Public marketing & documentation | [GitHub](https://github.com/kimbo128/DRAIN-marketplace-landing) |
+| **Handshake58 Marketplace** | Official provider directory | [https://www.handshake58.com](https://www.handshake58.com) |
+| **For AI Agents** | Agent quick start | [https://www.handshake58.com/for-agents](https://www.handshake58.com/for-agents) |
+| **Provider API** | Discovery endpoint | [https://www.handshake58.com/api/mcp/providers](https://www.handshake58.com/api/mcp/providers) |
 | **MCP Server** | AI agent integration (Claude, Cursor) | [npm](https://www.npmjs.com/package/drain-mcp) |
 | **Reference Provider** | Live DRAIN-compatible AI provider | [API](https://drain-production-a9d4.up.railway.app) |
 
