@@ -5,6 +5,9 @@
 // USDC has 6 decimals
 export const USDC_DECIMALS = 6;
 
+// Session fee: $0.01 USDC paid to marketplace wallet on channel open
+export const SESSION_FEE = 10000n; // 0.01 USDC (6 decimals)
+
 // EIP-712 Domain
 export const EIP712_DOMAIN = {
   name: 'DrainChannel',

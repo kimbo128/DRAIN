@@ -36,6 +36,7 @@ export interface DrainConfig {
   chainId: number;
   rpcUrl: string;
   directoryUrl: string;
+  marketplaceBaseUrl: string;
   drainAddress: Address;
   usdcAddress: Address;
   chain: Chain;
@@ -60,7 +61,11 @@ export function loadConfig(): DrainConfig {
   }
   
   const rpcUrl = process.env.DRAIN_RPC_URL || DEFAULT_RPC_URLS[chainId];
-  const directoryUrl = process.env.DRAIN_DIRECTORY_URL || 'https://believable-inspiration-production-b1c6.up.railway.app/api/mcp/providers';
+  const directoryUrl = process.env.DRAIN_DIRECTORY_URL || 'https://handshake58.com/api/mcp/providers';
+  
+  // Derive marketplace base URL from directory URL (strip /api/... path)
+  const defaultMarketplaceBase = new URL(directoryUrl).origin;
+  const marketplaceBaseUrl = process.env.DRAIN_MARKETPLACE_URL || defaultMarketplaceBase;
   
   const drainAddress = DRAIN_ADDRESSES[chainId];
   const usdcAddress = USDC_ADDRESSES[chainId];
@@ -71,6 +76,7 @@ export function loadConfig(): DrainConfig {
     chainId,
     rpcUrl,
     directoryUrl,
+    marketplaceBaseUrl,
     drainAddress,
     usdcAddress,
     chain,

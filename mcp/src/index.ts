@@ -6,6 +6,78 @@
  * Enables AI agents to pay for AI inference using DRAIN protocol.
  */
 
+// Handle --help before any imports that require configuration
+const args = process.argv.slice(2);
+if (args.includes('--help') || args.includes('-h')) {
+  console.log(`
+drain-mcp — MCP server for AI agent payments via Handshake58
+
+WHAT IS THIS?
+  drain-mcp is a Model Context Protocol (MCP) server. It is NOT a standalone
+  CLI tool. It runs inside any MCP-compatible AI client and gives the AI
+  agent tools to discover providers, open payment channels, and call AI
+  services — all paid with USDC micropayments on Polygon.
+
+COMPATIBLE CLIENTS (any MCP-compatible agent):
+  - Cursor          Add to .cursor/mcp.json
+  - Claude Desktop  Add to claude_desktop_config.json
+  - Cline           Add to MCP settings
+  - Windsurf        Add to MCP config
+  - OpenAI Agents   Via MCP bridge
+  - Any agent that speaks Model Context Protocol
+
+CONFIGURATION:
+  {
+    "mcpServers": {
+      "drain": {
+        "command": "drain-mcp",
+        "env": {
+          "DRAIN_PRIVATE_KEY": "0x_your_polygon_wallet_private_key"
+        }
+      }
+    }
+  }
+
+ENVIRONMENT VARIABLES:
+  DRAIN_PRIVATE_KEY     (required) Polygon wallet private key (0x + 64 hex chars)
+                        Use a dedicated wallet with minimal funds ($1-5 USDC)
+  DRAIN_CHAIN_ID        Chain ID: 137 (Polygon, default) or 80002 (Amoy testnet)
+  DRAIN_RPC_URL         Custom RPC endpoint (default: polygon-rpc.com)
+  DRAIN_DIRECTORY_URL   Provider directory URL
+  DRAIN_MARKETPLACE_URL Marketplace base URL
+
+MCP TOOLS PROVIDED:
+  drain_providers       List available AI providers and models
+  drain_provider_info   Get details for a specific provider
+  drain_balance         Check wallet USDC balance and allowance
+  drain_approve         Approve USDC spending for the DRAIN contract
+  drain_open_channel    Open a payment channel with a provider
+  drain_close_channel   Close an expired channel and reclaim funds
+  drain_channel_status  Check the status of a payment channel
+  drain_chat            Send a chat completion request to a provider
+
+SETUP (agent can do most of this autonomously):
+  AGENT CAN DO:
+    1. Install drain-mcp (ask user to approve if needed)
+    2. Create a Polygon wallet key programmatically:
+         JavaScript: require('viem').generatePrivateKey()
+         Or ask user for an existing wallet key
+    3. Configure MCP client with the key
+
+  REQUIRES HUMAN (the one thing agents cannot do):
+    4. Fund the wallet on Polygon: $1-5 USDC + $0.10 POL for gas
+       Give the user the wallet address and ask them to send funds
+
+LINKS:
+  Marketplace:  https://handshake58.com
+  Docs:         https://handshake58.com/skill.md
+  Providers:    https://handshake58.com/api/mcp/providers
+  npm:          https://www.npmjs.com/package/drain-mcp
+  Source:       https://github.com/kimbo128/DRAIN
+`);
+  process.exit(0);
+}
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -15,6 +87,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
+import type { Address } from 'viem';
 import { loadConfig, createClients, type DrainConfig } from './config.js';
 import { WalletService } from './services/wallet.js';
 import { ChannelService } from './services/channel.js';
@@ -37,6 +110,7 @@ class DrainMcpServer {
   private channelService: ChannelService;
   private providerService: ProviderService;
   private inferenceService: InferenceService;
+  private feeWallet: Address | null = null;
 
   constructor() {
     // Load configuration
@@ -55,7 +129,7 @@ class DrainMcpServer {
     this.server = new Server(
       {
         name: 'drain-mcp',
-        version: '0.1.0',
+        version: '0.1.10',
       },
       {
         capabilities: {
@@ -108,6 +182,8 @@ class DrainMcpServer {
             result = await openChannel(
               this.channelService, 
               this.providerService,
+              this.walletService,
+              this.feeWallet,
               args as { provider: string; amount: string; duration: string }
             );
             break;
@@ -196,7 +272,29 @@ class DrainMcpServer {
     });
   }
 
+  /**
+   * Fetch marketplace fee wallet (cached for server lifetime)
+   */
+  private async loadFeeWallet(): Promise<void> {
+    try {
+      const url = `${this.config.marketplaceBaseUrl}/api/directory/config`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const cfg = await res.json() as { feeWallet?: string };
+        if (cfg.feeWallet && /^0x[a-fA-F0-9]{40}$/.test(cfg.feeWallet)) {
+          this.feeWallet = cfg.feeWallet as Address;
+          console.error(`Fee wallet: ${this.feeWallet}`);
+        }
+      }
+    } catch {
+      console.error('Could not load marketplace config — session fees disabled');
+    }
+  }
+
   async run(): Promise<void> {
+    // Load marketplace fee wallet before accepting requests
+    await this.loadFeeWallet();
+    
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     
@@ -211,8 +309,33 @@ class DrainMcpServer {
 // MAIN
 // ============================================================================
 
-const server = new DrainMcpServer();
-server.run().catch((error) => {
-  console.error('Fatal error:', error);
+try {
+  const server = new DrainMcpServer();
+  server.run().catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+} catch (error) {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (msg.includes('DRAIN_PRIVATE_KEY')) {
+    console.error(`\n  drain-mcp: ${msg}\n`);
+    console.error('  Setup:');
+    console.error('    1. Create a Polygon wallet (MetaMask, Rabby, or any EVM wallet)');
+    console.error('    2. Fund it with $1-5 USDC + $0.10 POL for gas');
+    console.error('    3. Add drain-mcp to your MCP client config:\n');
+    console.error('       {');
+    console.error('         "mcpServers": {');
+    console.error('           "drain": {');
+    console.error('             "command": "drain-mcp",');
+    console.error('             "env": { "DRAIN_PRIVATE_KEY": "0x..." }');
+    console.error('           }');
+    console.error('         }');
+    console.error('       }\n');
+    console.error('  This is an MCP server, not a CLI tool. It runs inside AI clients');
+    console.error('  like Cursor, Claude Desktop, Cline, Windsurf, or any MCP-compatible agent.\n');
+    console.error('  Run drain-mcp --help for more information.\n');
+  } else {
+    console.error('Fatal error:', msg);
+  }
   process.exit(1);
-});
+}

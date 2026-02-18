@@ -1,7 +1,12 @@
 {
   "name": "drain-mcp",
-  "version": "0.1.2",
-  "description": "MCP Server for DRAIN Protocol - Autonomous AI payments",
+  "version": "0.1.10",
+  "mcpName": "io.github.kimbo128/drain-mcp",
+  "description": "Let AI agents pay for inference with USDC micropayments on Polygon. No API keys needed.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kimbo128/DRAIN.git"
+  },
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -15,15 +20,17 @@
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "drain",
-    "ai",
-    "payments",
+    "ai-agent",
+    "ai-payments",
     "micropayments",
     "polygon",
     "usdc",
-    "agent"
+    "crypto",
+    "inference"
   ],
-  "author": "",
+  "author": "Handshake58",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

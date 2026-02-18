@@ -100,6 +100,24 @@ export class WalletService {
   }
 
   /**
+   * Transfer USDC to an address (used for marketplace session fee)
+   */
+  async transferUsdc(to: Address, amount: bigint): Promise<Hash> {
+    const hash = await this.walletClient.writeContract({
+      account: this.account,
+      address: this.config.usdcAddress,
+      abi: ERC20_ABI,
+      functionName: 'transfer',
+      args: [to, amount],
+      chain: this.config.chain,
+    });
+    
+    await this.publicClient.waitForTransactionReceipt({ hash });
+    
+    return hash;
+  }
+
+  /**
    * Get native token (POL/MATIC) balance for gas
    */
   async getNativeBalance(): Promise<{ raw: bigint; formatted: string }> {

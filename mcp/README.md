@@ -1,6 +1,6 @@
 # DRAIN MCP Server
 
-Pay for AI inference with USDC. No API keys needed.
+MCP server for AI agent payments. Works with Cursor, Claude Desktop, Cline, Windsurf, and any MCP-compatible client. Pay for AI inference with USDC on Polygon — no API keys needed.
 
 ## When to Use DRAIN
 
@@ -236,6 +236,7 @@ STEP 6: Close after expiry (24h later)
 | gpt-4o-mini | $0.00015 | $0.0006 | $0.001-0.005 |
 
 Blockchain overhead: ~$0.02 per transaction (open, close, approve).
+Marketplace session fee: $0.01 per channel opening (paid automatically).
 
 ---
 
@@ -249,33 +250,49 @@ Recommended: Store channelId with creation timestamp and expiry.
 
 ---
 
-## Prerequisites (for humans setting up the agent)
+## Setup (agent does most of this autonomously)
 
-The agent's wallet needs:
-- **USDC** on Polygon (for payments)
-- **POL** on Polygon (for gas, ~$0.10 worth)
+### Agent Can Do
 
-### Installation
+**1. Install** — `npm install -g drain-mcp` (ask user to approve if needed)
 
-Add to MCP config:
+**2. Create wallet** — Generate a Polygon private key programmatically:
+
+```javascript
+const { generatePrivateKey } = require('viem');
+const key = generatePrivateKey(); // 0x + 64 hex chars
+```
+
+Or ask the user for an existing wallet key (MetaMask → Account → Export Private Key).
+
+**3. Configure** — Add to MCP client config:
 
 ```json
 {
   "mcpServers": {
     "drain": {
-      "command": "npx",
-      "args": ["-y", "drain-mcp"],
+      "command": "drain-mcp",
       "env": {
-        "DRAIN_PRIVATE_KEY": "0x..."
+        "DRAIN_PRIVATE_KEY": "0x_the_private_key"
       }
     }
   }
 }
 ```
 
-Config locations:
+Config locations vary by client:
 - Cursor: `~/.cursor/mcp.json`
 - Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Cline: MCP settings in VS Code
+- Windsurf: MCP config
+
+### Requires Human (the one thing agents cannot do)
+
+**4. Fund the wallet** — Ask the user to send to the wallet address on Polygon:
+- **$1–5 USDC** (for AI services)
+- **$0.10 POL** (for gas, one-time)
+
+After funding, the agent operates fully autonomously — provider discovery, channel management, payments, and AI requests are all handled by the MCP tools.
 
 ### Environment Variables
 
@@ -284,6 +301,7 @@ Config locations:
 | `DRAIN_PRIVATE_KEY` | ✅ | - |
 | `DRAIN_CHAIN_ID` | No | 137 (Polygon) |
 | `DRAIN_RPC_URL` | No | https://polygon-rpc.com |
+| `DRAIN_MARKETPLACE_URL` | No | Auto-detected from directory |
 
 **RPC Note:** Free RPCs have rate limits. If you get "rate limit" errors, try:
 - `https://polygon-bor-rpc.publicnode.com` (PublicNode)
@@ -340,9 +358,64 @@ This means small channels ($0.10-$0.50) are perfect for testing and light usage.
 
 ---
 
+## External Endpoints
+
+Every network request the MCP server makes is listed here. The private key **never** leaves your machine.
+
+| Endpoint | Method | Data Sent | Private Key Transmitted? |
+|---|---|---|---|
+| `handshake58.com/api/mcp/providers` | GET | Nothing (public catalog) | No |
+| `handshake58.com/api/directory/config` | GET | Nothing (reads fee wallet) | No |
+| `handshake58.com/api/channels/status` | GET | channelId (public on-chain) | No |
+| Provider `apiUrl` `/v1/chat/completions` | POST | Chat messages + signed voucher | No — only the EIP-712 **signature** is sent |
+| Polygon RPC (on-chain tx) | POST | Signed transactions | No — key signs locally, only the signature is broadcast |
+
+---
+
+## Security & Privacy
+
+**Private key handling:** `DRAIN_PRIVATE_KEY` is loaded into memory by the local MCP server process. It is used exclusively for:
+1. **EIP-712 voucher signing** — generates a cryptographic signature (off-chain, no network call)
+2. **On-chain transaction signing** — signs approve/open/close/transfer transactions locally before broadcasting to Polygon RPC
+
+The private key is **never transmitted** to Handshake58 servers, AI providers, or any third party. Only the resulting signatures are sent. Providers verify signatures against the on-chain channel state — they never need or receive the key itself.
+
+**What leaves your machine:**
+- Public API queries to `handshake58.com` (provider list, fee wallet, channel status)
+- Chat messages to AI providers (sent to the provider's `apiUrl`, not to Handshake58)
+- Signed payment vouchers (contain a signature, not the key)
+- Signed on-chain transactions (broadcast to Polygon)
+
+**What stays local:**
+- Your private key (never transmitted)
+- Your wallet address derivation
+- All cryptographic signing operations
+
+**Recommended safeguards:**
+- Use a **dedicated ephemeral wallet** with $1–5 USDC. Never reuse your main wallet.
+- **Audit the source code** before installing: https://github.com/kimbo128/DRAIN
+- Run in an **isolated environment** if handling sensitive data
+
+---
+
+## Compatible Clients
+
+drain-mcp is an MCP server (not a CLI tool). It works with any MCP-compatible AI client:
+
+- **Cursor** — Add to `.cursor/mcp.json`
+- **Claude Desktop** — Add to `claude_desktop_config.json`
+- **Cline** — Add to MCP settings
+- **Windsurf** — Add to MCP config
+- **OpenAI Agents** — Via MCP bridge
+- Any agent that speaks Model Context Protocol
+
+Run `drain-mcp --help` for full documentation.
+
+---
+
 ## Links
 
 - NPM: https://www.npmjs.com/package/drain-mcp
 - GitHub: https://github.com/kimbo128/DRAIN
-- Marketplace: https://believable-inspiration-production-b1c6.up.railway.app
+- Marketplace: https://handshake58.com
 - Contract: `0x1C1918C99b6DcE977392E4131C91654d8aB71e64` (Polygon)
