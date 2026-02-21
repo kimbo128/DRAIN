@@ -51,6 +51,9 @@ export class ChannelService {
   // Track cumulative spending per channel
   private spending: Map<Hash, bigint> = new Map();
 
+  // Track which provider ID each channel was opened for
+  private providerIds: Map<Hash, string> = new Map();
+
   constructor(
     private publicClient: PublicClient,
     private walletClient: WalletClient,
@@ -243,6 +246,21 @@ export class ChannelService {
       nonce,
       signature,
     };
+  }
+
+  /**
+   * Store the provider ID associated with a channel (for correct routing when
+   * multiple providers share the same wallet address).
+   */
+  setProviderId(channelId: Hash, providerId: string): void {
+    this.providerIds.set(channelId, providerId);
+  }
+
+  /**
+   * Get the stored provider ID for a channel.
+   */
+  getProviderId(channelId: Hash): string | undefined {
+    return this.providerIds.get(channelId);
   }
 
   /**

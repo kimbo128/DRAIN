@@ -33,11 +33,13 @@ export async function chat(
     throw new Error('Channel has expired. Open a new channel to continue.');
   }
   
-  // Find provider by address
+  // Find provider — prefer stored ID (handles multiple providers sharing one wallet),
+  // fall back to address match for channels opened before this fix
   const providers = await providerService.getProviders();
-  const provider = providers.find(p => 
-    p.providerAddress.toLowerCase() === channel.provider.toLowerCase()
-  );
+  const storedProviderId = channelService.getProviderId(channelId);
+  const provider = storedProviderId
+    ? providers.find(p => p.id === storedProviderId)
+    : providers.find(p => p.providerAddress.toLowerCase() === channel.provider.toLowerCase());
   
   if (!provider) {
     throw new Error(`Provider ${channel.provider} not found in directory. The channel may be for an unlisted provider.`);

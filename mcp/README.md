@@ -78,7 +78,7 @@ Open a payment channel. Locks USDC for the duration.
 
 ```json
 {
-  "providerId": "prov_initial_drain",  // required: from drain_providers()
+  "provider": "prov_initial_drain",    // required: provider ID from drain_providers() (recommended) or wallet address (0x...)
   "amount": "5.00",                     // required: USDC to deposit
   "duration": "24h"                     // required: "1h", "24h", "7d", etc.
 }
@@ -87,6 +87,8 @@ Open a payment channel. Locks USDC for the duration.
 Returns: `{ channelId, provider, amount, expiresAt }`
 
 **Save the channelId** - you need it for all subsequent calls.
+
+**Use provider ID, not wallet address.** When multiple providers share the same wallet, using the ID ensures `drain_chat` routes to the correct provider.
 
 ### drain_channel_status
 Check a channel's state.

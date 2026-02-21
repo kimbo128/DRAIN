@@ -49,9 +49,10 @@ export async function openChannel(
     duration: string;  // Duration like "24h", "7d"
   }
 ): Promise<string> {
-  // Resolve provider address
+  // Resolve provider address and ID
   let providerAddress: Address;
   let providerName: string;
+  let providerId: string | undefined;
   
   if (args.provider.startsWith('0x')) {
     providerAddress = args.provider as Address;
@@ -63,6 +64,7 @@ export async function openChannel(
     }
     providerAddress = provider.providerAddress as Address;
     providerName = provider.name;
+    providerId = provider.id;
   }
   
   const durationSeconds = parseDuration(args.duration);
