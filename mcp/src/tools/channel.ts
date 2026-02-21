@@ -81,6 +81,10 @@ export async function openChannel(
   
   const result = await channelService.openChannel(providerAddress, args.amount, durationSeconds);
   
+  if (providerId) {
+    channelService.setProviderId(result.channelId, providerId);
+  }
+  
   const expiryDate = result.channel.expiry.toISOString();
   const hours = Math.floor(durationSeconds / 3600);
   const feeAmount = formatUnits(SESSION_FEE, USDC_DECIMALS);
