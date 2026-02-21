@@ -94,6 +94,18 @@ export async function openChannel(
     : feeWallet
       ? `- **Session Fee:** ⚠️ Payment failed (channel opened anyway)`
       : '';
+
+  // Fetch provider docs so the agent knows how to use this provider
+  let docsSection = '';
+  if (providerId) {
+    const provider = await providerService.getProvider(providerId);
+    if (provider) {
+      const docs = await providerService.fetchDocs(provider);
+      if (docs) {
+        docsSection = `\n## Provider Instructions\n\n${docs}\n`;
+      }
+    }
+  }
   
   return `# ✅ Channel Opened
 
@@ -105,7 +117,7 @@ export async function openChannel(
 - **Deposit:** $${args.amount} USDC
 ${feeSection ? feeSection + '\n' : ''}- **Duration:** ${hours} hours
 - **Expires:** ${expiryDate}
-
+${docsSection}
 ## Next Steps
 Use \`drain_chat\` to make AI requests through this channel.
 The channel ID will be used automatically, or you can specify it explicitly.

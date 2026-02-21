@@ -30,6 +30,7 @@ export interface Provider {
     latencyMs: number | null;
   };
   models: ProviderModel[];
+  docsUrl?: string;
 }
 
 export interface DirectoryResponse {
@@ -49,6 +50,7 @@ export class ProviderService {
   private cache: Provider[] = [];
   private lastFetch: number = 0;
   private cacheTtl: number = 60000; // 1 minute
+  private docsCache: Map<string, string> = new Map();
 
   constructor(private config: DrainConfig) {}
 
@@ -113,6 +115,28 @@ export class ProviderService {
   async getOnlineProviders(): Promise<Provider[]> {
     const providers = await this.getProviders();
     return providers.filter(p => p.status.online);
+  }
+
+  /**
+   * Fetch provider usage docs from their /v1/docs endpoint.
+   * Cached per provider ID to avoid repeated fetches.
+   */
+  async fetchDocs(provider: Provider): Promise<string | null> {
+    if (!provider.docsUrl) return null;
+
+    const cached = this.docsCache.get(provider.id);
+    if (cached) return cached;
+
+    try {
+      const res = await fetch(provider.docsUrl, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return null;
+      const text = await res.text();
+      const trimmed = text.slice(0, 2000);
+      this.docsCache.set(provider.id, trimmed);
+      return trimmed;
+    } catch {
+      return null;
+    }
   }
 
   /**

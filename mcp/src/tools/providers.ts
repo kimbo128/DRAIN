@@ -21,6 +21,7 @@ function formatProvider(p: Provider): string {
 - **Latency:** ${latency}
 - **Address:** ${p.providerAddress}
 - **API:** ${p.apiUrl}
+- **Docs:** ${p.docsUrl ?? 'N/A'}
 - **Chain:** ${p.chainId === 137 ? 'Polygon Mainnet' : 'Polygon Amoy'}
 
 **Description:** ${p.description}
