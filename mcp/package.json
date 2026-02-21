@@ -1,6 +1,6 @@
 {
   "name": "drain-mcp",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "mcpName": "io.github.kimbo128/drain-mcp",
   "description": "Let AI agents pay for inference with USDC micropayments on Polygon. No API keys needed.",
   "repository": {
