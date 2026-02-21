@@ -114,8 +114,28 @@ export class ChannelService {
     this.nonces.set(channelId, 0n);
     this.spending.set(channelId, 0n);
     
-    // Get channel info
-    const channel = await this.getChannel(channelId);
+    // Parse deposit + expiry directly from event data (avoids a second RPC call
+    // that can return stale state and cause 1970-01-01 expiry or broken responses)
+    let channel: ChannelInfo;
+    try {
+      const eventData = openedEvent.data;
+      const deposit = BigInt('0x' + eventData.slice(2, 66));
+      const expiry = BigInt('0x' + eventData.slice(66, 130));
+      const now = BigInt(Math.floor(Date.now() / 1000));
+
+      channel = {
+        id: channelId,
+        provider: provider,
+        deposit: formatUnits(deposit, USDC_DECIMALS),
+        claimed: '0',
+        remaining: formatUnits(deposit, USDC_DECIMALS),
+        expiry: new Date(Number(expiry) * 1000),
+        isExpired: now >= expiry,
+        secondsRemaining: Math.max(0, Number(expiry - now)),
+      };
+    } catch {
+      channel = await this.getChannel(channelId);
+    }
     
     return { channelId, txHash: hash, channel };
   }

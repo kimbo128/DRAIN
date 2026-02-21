@@ -144,13 +144,20 @@ export class InferenceService {
   ): string {
     const model = provider.models.find(m => m.id === modelId);
     if (!model) {
-      return '0.01'; // Default estimate
+      return '0.01';
+    }
+
+    const inputPrice = parseFloat(model.pricing.inputPer1kTokens);
+    const outputPrice = parseFloat(model.pricing.outputPer1kTokens);
+
+    // Flat-rate provider (e.g. Apify): outputPer1k is 0, inputPer1k is the full run price
+    if (outputPrice === 0 && inputPrice > 0) {
+      return (inputPrice * 1.2).toFixed(6);
     }
     
-    const inputCost = (inputTokens / 1000) * parseFloat(model.pricing.inputPer1kTokens);
-    const outputCost = (expectedOutputTokens / 1000) * parseFloat(model.pricing.outputPer1kTokens);
-    
-    // Add 20% buffer
+    // Token-based provider (LLMs)
+    const inputCost = (inputTokens / 1000) * inputPrice;
+    const outputCost = (expectedOutputTokens / 1000) * outputPrice;
     const totalWithBuffer = (inputCost + outputCost) * 1.2;
     
     return totalWithBuffer.toFixed(6);

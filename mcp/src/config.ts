@@ -21,7 +21,7 @@ export const USDC_ADDRESSES: Record<number, Address> = {
 
 // Default RPC URLs
 const DEFAULT_RPC_URLS: Record<number, string> = {
-  137: 'https://polygon-rpc.com',
+  137: 'https://polygon-bor-rpc.publicnode.com',
   80002: 'https://rpc-amoy.polygon.technology',
 };
 
