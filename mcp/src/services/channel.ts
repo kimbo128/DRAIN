@@ -14,6 +14,9 @@ import {
   type WalletClient, 
   type Account 
 } from 'viem';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { USDC_DECIMALS, DRAIN_CHANNEL_ABI, ERC20_ABI, EIP712_DOMAIN, VOUCHER_TYPES } from '../constants.js';
 import type { DrainConfig } from '../config.js';
 
@@ -51,15 +54,38 @@ export class ChannelService {
   // Track cumulative spending per channel
   private spending: Map<Hash, bigint> = new Map();
 
-  // Track which provider ID each channel was opened for
+  // Track which provider ID each channel was opened for (persisted to disk)
   private providerIds: Map<Hash, string> = new Map();
+  private channelsFile: string;
 
   constructor(
     private publicClient: PublicClient,
     private walletClient: WalletClient,
     private account: Account,
     private config: DrainConfig
-  ) {}
+  ) {
+    const dir = join(homedir(), '.drain-mcp');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    this.channelsFile = join(dir, 'channels.json');
+    this.loadProviderIds();
+  }
+
+  private loadProviderIds(): void {
+    try {
+      if (existsSync(this.channelsFile)) {
+        const data = JSON.parse(readFileSync(this.channelsFile, 'utf-8'));
+        for (const [k, v] of Object.entries(data)) {
+          this.providerIds.set(k as Hash, v as string);
+        }
+      }
+    } catch { /* ignore corrupt file */ }
+  }
+
+  private saveProviderIds(): void {
+    try {
+      writeFileSync(this.channelsFile, JSON.stringify(Object.fromEntries(this.providerIds), null, 2));
+    } catch { /* non-fatal */ }
+  }
 
   /**
    * Open a new payment channel
@@ -173,6 +199,8 @@ export class ChannelService {
     // Clean up tracking
     this.nonces.delete(channelId);
     this.spending.delete(channelId);
+    this.providerIds.delete(channelId);
+    this.saveProviderIds();
     
     return { 
       txHash: hash, 
@@ -274,6 +302,7 @@ export class ChannelService {
    */
   setProviderId(channelId: Hash, providerId: string): void {
     this.providerIds.set(channelId, providerId);
+    this.saveProviderIds();
   }
 
   /**
