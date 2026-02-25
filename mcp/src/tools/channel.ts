@@ -7,6 +7,7 @@
 import type { Hash, Address } from 'viem';
 import type { ChannelService } from '../services/channel.js';
 import type { ProviderService } from '../services/provider.js';
+import type { Provider } from '../services/provider.js';
 import type { WalletService } from '../services/wallet.js';
 import { SESSION_FEE, USDC_DECIMALS } from '../constants.js';
 import { formatUnits } from 'viem';
@@ -49,14 +50,23 @@ export async function openChannel(
     duration: string;  // Duration like "24h", "7d"
   }
 ): Promise<string> {
-  // Resolve provider address and ID
+  // Resolve provider - always try to get the full provider object for docsUrl
   let providerAddress: Address;
   let providerName: string;
-  let providerId: string | undefined;
+  let resolvedProvider: Provider | null = null;
   
   if (args.provider.startsWith('0x')) {
     providerAddress = args.provider as Address;
     providerName = args.provider;
+    // Try to find the full provider by wallet address for docsUrl
+    const allProviders = await providerService.getProviders();
+    const matched = allProviders.find(
+      p => p.providerAddress.toLowerCase() === providerAddress.toLowerCase()
+    );
+    if (matched) {
+      providerName = matched.name;
+      resolvedProvider = matched;
+    }
   } else {
     const provider = await providerService.getProvider(args.provider);
     if (!provider) {
@@ -64,7 +74,7 @@ export async function openChannel(
     }
     providerAddress = provider.providerAddress as Address;
     providerName = provider.name;
-    providerId = provider.id;
+    resolvedProvider = provider;
   }
   
   const durationSeconds = parseDuration(args.duration);
@@ -81,8 +91,8 @@ export async function openChannel(
   
   const result = await channelService.openChannel(providerAddress, args.amount, durationSeconds);
   
-  if (providerId) {
-    channelService.setProviderId(result.channelId, providerId);
+  if (resolvedProvider) {
+    channelService.setProviderId(result.channelId, resolvedProvider.id);
   }
   
   const expiryDate = result.channel.expiry.toISOString();
@@ -97,16 +107,22 @@ export async function openChannel(
 
   // Fetch provider docs so the agent knows how to use this provider
   let docsSection = '';
-  if (providerId) {
-    const provider = await providerService.getProvider(providerId);
-    if (provider) {
-      const docs = await providerService.fetchDocs(provider);
-      if (docs) {
-        docsSection = `\n## Provider Instructions\n\n${docs}\n`;
-      }
+  if (resolvedProvider) {
+    const docsUrl = resolvedProvider.docsUrl || `${resolvedProvider.apiUrl}/v1/docs`;
+    const docs = await providerService.fetchDocs(resolvedProvider);
+    if (docs) {
+      docsSection = `\n## Provider Instructions\n\n${docs}\n`;
+    } else {
+      docsSection = `\n## Provider Documentation
+**IMPORTANT:** Before sending requests, read the provider docs to understand the API:
+${docsUrl}
+
+The provider may require specific request formats, function calling, or multi-step workflows
+that differ from standard OpenAI chat completions. Fetch the docs URL above to learn how to
+use this provider correctly.\n`;
     }
   }
-  
+
   return `# ✅ Channel Opened
 
 **Channel ID:** \`${result.channelId}\`

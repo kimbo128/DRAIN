@@ -129,7 +129,7 @@ class DrainMcpServer {
     this.server = new Server(
       {
         name: 'drain-mcp',
-        version: '0.1.10',
+        version: '0.1.17',
       },
       {
         capabilities: {

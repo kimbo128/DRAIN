@@ -24,13 +24,13 @@ export interface Provider {
   apiUrl: string;
   providerAddress: string;
   chainId: number;
+  docsUrl?: string;
   status: {
     online: boolean;
     lastChecked: number | null;
     latencyMs: number | null;
   };
   models: ProviderModel[];
-  docsUrl?: string;
 }
 
 export interface DirectoryResponse {
