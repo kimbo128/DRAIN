@@ -1,45 +1,48 @@
 /**
  * Provider Discovery Tools
- * 
- * Tools for discovering and inspecting DRAIN AI providers.
  */
 
 import type { ProviderService, Provider } from '../services/provider.js';
 
-/**
- * Format provider for display
- */
+function formatPricing(m: Provider['models'][0]): string {
+  const input = parseFloat(m.pricing.inputPer1kTokens);
+  const output = parseFloat(m.pricing.outputPer1kTokens);
+  if (output === 0 && input > 0) {
+    return `$${m.pricing.inputPer1kTokens} per run (flat rate)`;
+  }
+  return `$${m.pricing.inputPer1kTokens} in / $${m.pricing.outputPer1kTokens} out per 1k tokens`;
+}
+
 function formatProvider(p: Provider): string {
   const status = p.status.online ? '🟢 ONLINE' : '🔴 OFFLINE';
   const latency = p.status.latencyMs ? `${p.status.latencyMs}ms` : 'N/A';
-  const models = p.models.map(m => `  - ${m.name} ($${m.pricing.inputPer1kTokens}/$${m.pricing.outputPer1kTokens} per 1k tokens)`).join('\n');
-  
+  const docsUrl = p.docsUrl || `${p.apiUrl}/v1/docs`;
+  const models = p.models.map(m => `  - ${m.name} (${formatPricing(m)})`).join('\n');
+
   return `
 ## ${p.name}
 - **ID:** ${p.id}
+- **Category:** ${p.category || 'llm'}
 - **Status:** ${status}
 - **Latency:** ${latency}
 - **Address:** ${p.providerAddress}
 - **API:** ${p.apiUrl}
-- **Docs:** ${p.docsUrl || `${p.apiUrl}/v1/docs`}
+- **Docs:** ${docsUrl}
 - **Chain:** ${p.chainId === 137 ? 'Polygon Mainnet' : 'Polygon Amoy'}
 
 **Description:** ${p.description}
 
-**Models:**
+**Models / Services:**
 ${models}
 `.trim();
 }
 
-/**
- * List all available providers
- */
 export async function listProviders(
   providerService: ProviderService,
-  args: { onlineOnly?: boolean; model?: string }
+  args: { onlineOnly?: boolean; model?: string; category?: string }
 ): Promise<string> {
   let providers: Provider[];
-  
+
   if (args.model) {
     providers = await providerService.findByModel(args.model);
   } else if (args.onlineOnly) {
@@ -47,45 +50,61 @@ export async function listProviders(
   } else {
     providers = await providerService.getProviders();
   }
-  
+
+  if (args.category) {
+    providers = providers.filter(p => (p.category || 'llm') === args.category);
+  }
+
   if (providers.length === 0) {
     if (args.model) {
       return `No providers found supporting model "${args.model}".`;
     }
+    if (args.category) {
+      return `No providers found in category "${args.category}".`;
+    }
     return 'No providers available in the directory.';
   }
-  
+
   const formatted = providers.map(formatProvider).join('\n\n---\n\n');
-  
-  return `# DRAIN AI Providers\n\nFound ${providers.length} provider(s):\n\n${formatted}`;
+
+  return `# DRAIN Providers\n\nFound ${providers.length} provider(s):\n\n${formatted}`;
 }
 
-/**
- * Get details for a specific provider
- */
 export async function getProvider(
   providerService: ProviderService,
   args: { providerId: string }
 ): Promise<string> {
   const provider = await providerService.getProvider(args.providerId);
-  
+
   if (!provider) {
     return `Provider "${args.providerId}" not found.`;
   }
-  
-  return formatProvider(provider);
+
+  let result = formatProvider(provider);
+
+  const docs = await providerService.fetchDocs(provider);
+  if (docs) {
+    result += `\n\n## Usage Instructions\n\n${docs}`;
+  } else {
+    const docsUrl = provider.docsUrl || `${provider.apiUrl}/v1/docs`;
+    result += `\n\n## Usage Instructions\nFetch docs before sending requests: ${docsUrl}`;
+  }
+
+  return result;
 }
 
-// Tool definitions for MCP
 export const providerTools = [
   {
     name: 'drain_providers',
-    description: `List available DRAIN AI providers. 
-    
-These are AI services that accept DRAIN micropayments for inference.
-Use this to discover which providers and models are available before opening a channel.
+    description: `List available service providers on the DRAIN marketplace.
 
-Returns: List of providers with their models, pricing, and status.`,
+Providers offer diverse services by category: llm, image, audio, code, scraping, vpn, multi-modal, other. Each provider has a docs endpoint with usage instructions for that service.
+
+For any provider that is not category "llm", read its docs (via drain_provider_info) before sending requests to learn the expected message format.
+
+You can open channels to multiple providers simultaneously for multi-service workflows.
+
+Returns: Providers with category, models/services, pricing, docs URL, and online status.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -95,16 +114,22 @@ Returns: List of providers with their models, pricing, and status.`,
         },
         model: {
           type: 'string',
-          description: 'Filter providers by model name (e.g., "gpt-4o", "gpt-3.5-turbo")',
+          description: 'Filter by model or service name (e.g. "gpt-4o", "web-scraper")',
+        },
+        category: {
+          type: 'string',
+          description: 'Filter by service category: llm, image, audio, code, scraping, vpn, multi-modal, other',
         },
       },
     },
   },
   {
     name: 'drain_provider_info',
-    description: `Get detailed information about a specific DRAIN provider.
-    
-Returns: Provider details including all available models and their pricing.`,
+    description: `Get detailed information about a provider including usage instructions.
+
+Returns provider details, available models/services, pricing, and docs content.
+The docs explain how to format the messages parameter in drain_chat for this provider.
+For non-LLM providers this is essential — the docs specify the expected JSON payload.`,
     inputSchema: {
       type: 'object',
       properties: {

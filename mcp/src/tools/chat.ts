@@ -1,7 +1,7 @@
 /**
- * Chat Tool
+ * Request Tool
  * 
- * The main tool: Make AI chat requests with DRAIN payment.
+ * Send paid requests to any provider through a payment channel.
  */
 
 import type { Hash } from 'viem';
@@ -82,24 +82,22 @@ function formatCost(cost: string): string {
   return num.toFixed(4);
 }
 
-// Tool definition for MCP
 export const chatTools = [
   {
     name: 'drain_chat',
-    description: `Send a chat completion request to an AI provider through DRAIN.
+    description: `Send a paid request to a provider through an open payment channel.
 
-This is the main tool for AI inference. It:
-1. Uses your open payment channel
-2. Automatically signs a payment voucher
-3. Sends the request to the provider
-4. Returns the AI response
+Works for ALL provider types — not just LLM chat:
+- LLM providers (category "llm"): Standard chat messages [{role, content}]
+- Non-LLM providers (scraping, image, VPN, etc.): Put structured JSON in the user message content. The expected format is in the provider's docs — call drain_provider_info first.
 
-PREREQUISITES:
-- You must have an open channel (use drain_open_channel first)
-- The channel must have sufficient balance
-- The channel must not be expired
+Payment is automatic: signs a voucher, deducts from channel balance, returns the response.
 
-The cost is automatically deducted from your channel balance.`,
+Requires an open, non-expired channel with sufficient balance.
+
+If "Channel expired" -> open a new channel.
+If "Insufficient balance" -> open a new channel with more funds.
+If "Provider offline" -> use drain_providers to find an alternative.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -109,11 +107,11 @@ The cost is automatically deducted from your channel balance.`,
         },
         model: {
           type: 'string',
-          description: 'Model ID to use (e.g., "gpt-4o", "gpt-4o-mini")',
+          description: 'Model or service ID from the provider\'s model list (see drain_provider_info)',
         },
         messages: {
           type: 'array',
-          description: 'Chat messages in OpenAI format',
+          description: 'Request payload. For LLM: chat messages [{role, content}]. For other providers: one user message with JSON content (see provider docs for format).',
           items: {
             type: 'object',
             properties: {
@@ -124,7 +122,7 @@ The cost is automatically deducted from your channel balance.`,
               },
               content: {
                 type: 'string',
-                description: 'Message content',
+                description: 'Message content (text for LLM, JSON string for non-LLM providers)',
               },
             },
             required: ['role', 'content'],
@@ -132,11 +130,11 @@ The cost is automatically deducted from your channel balance.`,
         },
         maxTokens: {
           type: 'number',
-          description: 'Maximum tokens to generate (optional)',
+          description: 'Maximum tokens to generate (LLM providers only, optional)',
         },
         temperature: {
           type: 'number',
-          description: 'Sampling temperature 0-2 (optional)',
+          description: 'Sampling temperature 0-2 (LLM providers only, optional)',
         },
       },
       required: ['channelId', 'model', 'messages'],

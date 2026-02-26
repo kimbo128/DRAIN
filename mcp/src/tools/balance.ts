@@ -1,7 +1,5 @@
 /**
  * Balance Tools
- * 
- * Check wallet balance and status.
  */
 
 import type { WalletService } from '../services/wallet.js';
@@ -65,11 +63,11 @@ export async function approveUsdc(
 export const balanceTools = [
   {
     name: 'drain_balance',
-    description: `Check wallet balance, USDC allowance, and readiness for DRAIN payments.
+    description: `Check wallet balance, USDC allowance, and readiness for DRAIN protocol.
 
 Use this to verify:
 - You have enough USDC to open channels
-- You have enough POL for gas fees  
+- You have enough POL for gas fees
 - USDC is approved for the DRAIN contract
 
 Returns: Wallet address, balances, and status indicators.`,
@@ -82,8 +80,8 @@ Returns: Wallet address, balances, and status indicators.`,
     name: 'drain_approve',
     description: `Approve USDC spending for the DRAIN contract.
 
-This is required before opening payment channels. 
-If no amount is specified, approves unlimited spending (recommended for convenience).
+Required before opening payment channels. Only needed once — after approval you can open unlimited channels.
+If no amount is specified, approves unlimited spending (recommended).
 
 Returns: Transaction hash of the approval.`,
     inputSchema: {

@@ -47,6 +47,12 @@ lcov.info
 *.bak
 *.tmp
 
+# MCP registry / publisher artifacts
+mcp/.mcpregistry_*
+mcp/.smithery/
+mcp/mcp-publisher.exe
+mcp/server.json
+
 # Internal docs (not public)
 LEARNINGS.md
 logins.md

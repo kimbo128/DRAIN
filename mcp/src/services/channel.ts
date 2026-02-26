@@ -47,15 +47,19 @@ export interface Voucher {
   signature: Hex;
 }
 
-export class ChannelService {
-  // Track voucher nonces per channel
-  private nonces: Map<Hash, bigint> = new Map();
-  
-  // Track cumulative spending per channel
-  private spending: Map<Hash, bigint> = new Map();
+export interface ChannelMeta {
+  providerId: string;
+  providerName?: string;
+  category?: string;
+  deposit?: string;
+  expiry?: number;
+  openedAt?: number;
+}
 
-  // Track which provider ID each channel was opened for (persisted to disk)
-  private providerIds: Map<Hash, string> = new Map();
+export class ChannelService {
+  private nonces: Map<Hash, bigint> = new Map();
+  private spending: Map<Hash, bigint> = new Map();
+  private channelMeta: Map<Hash, ChannelMeta> = new Map();
   private channelsFile: string;
 
   constructor(
@@ -67,24 +71,40 @@ export class ChannelService {
     const dir = join(homedir(), '.drain-mcp');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     this.channelsFile = join(dir, 'channels.json');
-    this.loadProviderIds();
+    this.loadChannelMeta();
   }
 
-  private loadProviderIds(): void {
+  private loadChannelMeta(): void {
     try {
       if (existsSync(this.channelsFile)) {
         const data = JSON.parse(readFileSync(this.channelsFile, 'utf-8'));
         for (const [k, v] of Object.entries(data)) {
-          this.providerIds.set(k as Hash, v as string);
+          if (typeof v === 'string') {
+            this.channelMeta.set(k as Hash, { providerId: v });
+          } else {
+            this.channelMeta.set(k as Hash, v as ChannelMeta);
+          }
         }
       }
     } catch { /* ignore corrupt file */ }
   }
 
-  private saveProviderIds(): void {
+  private saveChannelMeta(): void {
     try {
-      writeFileSync(this.channelsFile, JSON.stringify(Object.fromEntries(this.providerIds), null, 2));
+      const obj: Record<string, ChannelMeta> = {};
+      for (const [k, v] of this.channelMeta.entries()) {
+        obj[k] = v;
+      }
+      writeFileSync(this.channelsFile, JSON.stringify(obj, null, 2));
     } catch { /* non-fatal */ }
+  }
+
+  getKnownChannelIds(): Hash[] {
+    return Array.from(this.channelMeta.keys());
+  }
+
+  getChannelMeta(channelId: Hash): ChannelMeta | undefined {
+    return this.channelMeta.get(channelId);
   }
 
   /**
@@ -196,11 +216,10 @@ export class ChannelService {
     
     await this.publicClient.waitForTransactionReceipt({ hash });
     
-    // Clean up tracking
     this.nonces.delete(channelId);
     this.spending.delete(channelId);
-    this.providerIds.delete(channelId);
-    this.saveProviderIds();
+    this.channelMeta.delete(channelId);
+    this.saveChannelMeta();
     
     return { 
       txHash: hash, 
@@ -296,20 +315,23 @@ export class ChannelService {
     };
   }
 
-  /**
-   * Store the provider ID associated with a channel (for correct routing when
-   * multiple providers share the same wallet address).
-   */
   setProviderId(channelId: Hash, providerId: string): void {
-    this.providerIds.set(channelId, providerId);
-    this.saveProviderIds();
+    const existing = this.channelMeta.get(channelId);
+    if (existing) {
+      existing.providerId = providerId;
+    } else {
+      this.channelMeta.set(channelId, { providerId });
+    }
+    this.saveChannelMeta();
   }
 
-  /**
-   * Get the stored provider ID for a channel.
-   */
+  setChannelMeta(channelId: Hash, meta: ChannelMeta): void {
+    this.channelMeta.set(channelId, meta);
+    this.saveChannelMeta();
+  }
+
   getProviderId(channelId: Hash): string | undefined {
-    return this.providerIds.get(channelId);
+    return this.channelMeta.get(channelId)?.providerId;
   }
 
   /**

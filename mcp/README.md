@@ -1,17 +1,17 @@
 # DRAIN MCP Server
 
-MCP server for AI agent payments. Works with Cursor, Claude Desktop, Cline, Windsurf, and any MCP-compatible client. Pay for AI inference with USDC on Polygon — no API keys needed.
+MCP server for the DRAIN payment protocol. Agents discover service providers, open USDC payment channels on Polygon, and call any service — LLM inference, web scraping, image generation, VPN, and more. No API keys, no subscriptions.
 
 ## When to Use DRAIN
 
 Use DRAIN when you need to:
-- Call AI models (GPT-4, Claude, etc.) without API keys
-- Pay per-request with cryptocurrency
-- Operate autonomously without human payment setup
+- Call any service (LLM, scraping, image generation, etc.) without API keys
+- Pay per-request with USDC on Polygon
+- Access multiple service types through one protocol
 
 Do NOT use DRAIN when:
-- You already have API keys for the model you need
-- The task doesn't require external AI inference
+- You already have API keys for the service you need
+- The task doesn't require external services
 - Cost is not a concern (DRAIN adds ~$0.04 blockchain overhead per session)
 
 ---
@@ -19,11 +19,14 @@ Do NOT use DRAIN when:
 ## TL;DR - Minimum Viable Workflow
 
 ```
-1. drain_balance()                    → Check if you have USDC
-2. drain_providers()                  → Find a provider with your model  
-3. drain_open_channel(...)            → Deposit USDC (one-time per session)
-4. drain_chat(...)                    → Use AI (repeat as needed)
-5. drain_close_channel(...)           → Get refund (after expiry)
+1. drain_providers()            → Find providers (filter by model or category)
+2. drain_provider_info(id)      → Get provider details + usage docs
+3. drain_balance()              → Check USDC + POL
+4. drain_approve()              → Approve USDC spending (once)
+5. drain_open_channel(...)      → Deposit USDC, get channelId
+6. drain_chat(...)              → Send requests (repeat as needed)
+7. drain_channels()             → Check all channels
+8. drain_close_channel(...)     → Reclaim funds (after expiry)
 ```
 
 ---
@@ -31,105 +34,89 @@ Do NOT use DRAIN when:
 ## Tools Reference
 
 ### drain_providers
-Find AI providers.
+Find service providers. Filter by model name, category, or online status.
 
 ```json
 {
-  "model": "gpt-4o",        // optional: filter by model
-  "onlineOnly": true        // optional: only online providers (default: true)
+  "model": "gpt-4o",
+  "category": "scraping",
+  "onlineOnly": true
 }
 ```
 
-Returns: List of providers with `id`, `name`, `apiUrl`, `models[]`, `status.online`
+Categories: `llm`, `image`, `audio`, `code`, `scraping`, `vpn`, `multi-modal`, `other`
 
-### drain_provider_info  
-Get details about one provider.
+### drain_provider_info
+Get details about a provider including usage instructions (docs). The docs explain how to format requests for that provider.
 
 ```json
-{
-  "providerId": "prov_initial_drain"   // required
-}
+{ "providerId": "hs58-openai" }
 ```
-
-Returns: Full provider details including all models and pricing
 
 ### drain_balance
-Check your wallet.
-
-```json
-{}  // no parameters
-```
-
-Returns: `{ usdc: { balance, formatted }, native: { balance, formatted }, address }`
+Check wallet USDC balance, POL for gas, and DRAIN contract allowance.
 
 ### drain_approve
-Allow DRAIN contract to spend your USDC. **Required before first channel.**
+Approve USDC spending for the DRAIN contract. Required once before opening channels.
 
 ```json
-{
-  "amount": "100"    // optional: USDC amount (default: unlimited)
-}
+{ "amount": "100" }
 ```
-
-Returns: Transaction hash
 
 ### drain_open_channel
-Open a payment channel. Locks USDC for the duration.
+Open a payment channel. Locks USDC for the specified duration.
 
 ```json
 {
-  "provider": "prov_initial_drain",    // required: provider ID from drain_providers() (recommended) or wallet address (0x...)
-  "amount": "5.00",                     // required: USDC to deposit
-  "duration": "24h"                     // required: "1h", "24h", "7d", etc.
+  "provider": "hs58-openai",
+  "amount": "5.00",
+  "duration": "24h"
 }
 ```
 
-Returns: `{ channelId, provider, amount, expiresAt }`
-
-**Save the channelId** - you need it for all subsequent calls.
-
-**Use provider ID, not wallet address.** When multiple providers share the same wallet, using the ID ensures `drain_chat` routes to the correct provider.
-
-### drain_channel_status
-Check a channel's state.
-
-```json
-{
-  "channelId": "0x..."    // required
-}
-```
-
-Returns: `{ deposit, spent, remaining, expiresAt, isExpired }`
+Returns channelId, expiry time, and provider usage docs. **Set a cron/timer for the expiry time to call drain_close_channel and recover funds.**
 
 ### drain_chat
-Send a chat completion request. Automatically handles payment.
+Send a paid request through a channel. Works for ALL provider types:
+
+- **LLM providers:** Standard chat messages
+- **Non-LLM providers:** JSON payload in the user message content (check provider docs)
 
 ```json
 {
-  "channelId": "0x...",                           // required
-  "model": "gpt-4o",                              // required
-  "messages": [                                   // required
-    {"role": "user", "content": "Hello"}
-  ],
-  "maxTokens": 1000,                              // optional
-  "temperature": 0.7                              // optional
+  "channelId": "0x...",
+  "model": "gpt-4o",
+  "messages": [{"role": "user", "content": "Hello"}]
 }
 ```
 
-Returns: `{ response, usage: { cost, totalSpent, remaining } }`
+### drain_channel_status
+Check a channel's deposit, spending, remaining balance, and expiry.
+
+### drain_channels
+List all known channels with status (active/expired/closed). Find expired channels that need closing.
 
 ### drain_close_channel
-Close an expired channel and get refund.
+Close an expired channel and reclaim unspent USDC.
 
-```json
-{
-  "channelId": "0x..."    // required
-}
-```
+---
 
-Returns: `{ refunded, txHash }`
+## Provider Categories
 
-**Note:** Can only close AFTER channel expires (duration ended).
+Providers are not limited to LLM chat. Each provider has a `category` field and a docs endpoint explaining how to format requests.
+
+| Category | Description | Message Format |
+|----------|-------------|----------------|
+| llm | Language models | Standard chat messages |
+| image | Image generation | JSON in user content (see docs) |
+| audio | Audio/TTS/STT | JSON in user content (see docs) |
+| code | Code generation | Standard chat or JSON (see docs) |
+| scraping | Web scraping | JSON in user content (see docs) |
+| vpn | VPN services | JSON in user content (see docs) |
+| multi-modal | Multi-modal models | Standard chat messages |
+| other | Everything else | Always check docs |
+
+**Rule: For any category other than `llm`, call `drain_provider_info` first to read the docs.**
 
 ---
 
@@ -140,16 +127,16 @@ Returns: `{ refunded, txHash }`
 ```
 Do I have an active channel?
 ├── YES → Use drain_chat() with existing channelId
-└── NO → 
+└── NO →
     ├── drain_balance() → Do I have USDC?
     │   ├── NO → Cannot proceed. Need USDC on Polygon.
-    │   └── YES → 
-    │       ├── drain_providers() → Find provider with my model
-    │       │   ├── NO providers → Cannot proceed. No providers available.
+    │   └── YES →
+    │       ├── drain_providers() → Find provider
+    │       │   ├── NO providers → Cannot proceed.
     │       │   └── Found provider →
-    │       │       ├── drain_approve() → First time only, if not already approved
+    │       │       ├── drain_approve() → First time only
     │       │       └── drain_open_channel() → Get channelId
-    │       │           └── drain_chat() → Make requests
+    │       │           └── drain_chat() → Send requests
 ```
 
 ### Choosing Amount and Duration
@@ -161,257 +148,109 @@ Do I have an active channel?
 | Extended session | $5 - $20 | 24h |
 | Long-running agent | $20 - $100 | 7d |
 
-Rule of thumb: **$0.01-0.05 per message** depending on model.
-
 ### Handling Errors
 
 ```
 "Insufficient balance"
-→ Need more USDC. Check drain_balance() for current amount.
+→ Need more USDC. Check drain_balance().
 
-"Insufficient allowance" 
-→ Run drain_approve() to allow DRAIN contract to use USDC.
+"Insufficient allowance"
+→ Run drain_approve().
 
 "Channel not found"
 → channelId is wrong or channel was closed. Open new channel.
 
 "Channel expired"
-→ For drain_chat(): Channel ended. Open new channel.
-→ For drain_close_channel(): This is expected. Proceed with close.
+→ For drain_chat: Open a new channel.
+→ For drain_close_channel: Expected. Proceed with close.
 
 "Insufficient channel balance"
 → Channel deposit used up. Open new channel with more funds.
 
 "Provider offline"
-→ Try drain_providers() to find alternative provider.
+→ Use drain_providers() to find alternative provider.
 ```
 
 ---
 
-## Example Session
-
-```
-TASK: Analyze code using GPT-4o
-
-STEP 1: Check wallet
-> drain_balance()
-← { usdc: { formatted: "50.00" }, native: { formatted: "2.5" } }
-✓ Have funds
-
-STEP 2: Find provider  
-> drain_providers({ model: "gpt-4o" })
-← [{ id: "prov_initial_drain", name: "DRAIN Reference Provider", 
-     models: [{ id: "gpt-4o", pricing: { input: "0.0075", output: "0.0225" }}] }]
-✓ Found provider
-
-STEP 3: Open channel ($5, 24 hours)
-> drain_open_channel({ providerId: "prov_initial_drain", amount: "5.00", duration: "24h" })
-← { channelId: "0x7f8a9b2c...", expiresAt: "2026-01-24T12:00:00Z" }
-✓ Channel open - SAVE THIS CHANNEL ID
-
-STEP 4: Make requests (repeat as needed)
-> drain_chat({ 
-    channelId: "0x7f8a9b2c...", 
-    model: "gpt-4o", 
-    messages: [{ role: "user", content: "Explain this code: ..." }] 
-  })
-← { response: "This code...", usage: { cost: "0.02", remaining: "4.98" } }
-✓ Got response
-
-STEP 5: Check status (optional)
-> drain_channel_status({ channelId: "0x7f8a9b2c..." })
-← { deposit: "5.00", spent: "0.15", remaining: "4.85", isExpired: false }
-
-STEP 6: Close after expiry (24h later)
-> drain_close_channel({ channelId: "0x7f8a9b2c..." })
-← { refunded: "4.85", txHash: "0x..." }
-✓ Got refund
-```
-
----
-
-## Pricing Reference
-
-| Model | Input/1k tokens | Output/1k tokens | ~Cost/message |
-|-------|-----------------|------------------|---------------|
-| gpt-4o | $0.0075 | $0.0225 | $0.01-0.05 |
-| gpt-4o-mini | $0.00015 | $0.0006 | $0.001-0.005 |
-
-Blockchain overhead: ~$0.02 per transaction (open, close, approve).
-Marketplace session fee: $0.01 per channel opening (paid automatically).
-
----
-
-## State Management
-
-**Persist the channelId** between calls. If you lose it:
-1. You cannot make more requests on that channel
-2. You cannot close the channel (funds locked until provider claims or you find the ID)
-
-Recommended: Store channelId with creation timestamp and expiry.
-
----
-
-## Setup (agent does most of this autonomously)
+## Setup
 
 ### Agent Can Do
 
-**1. Install** — `npm install -g drain-mcp` (ask user to approve if needed)
+1. **Install** — `npm install -g drain-mcp`
+2. **Create wallet** — `require('viem').generatePrivateKey()` or ask user for existing key
+3. **Configure** — Add to MCP client config (see below)
 
-**2. Create wallet** — Generate a Polygon private key programmatically:
+### Requires Human
 
-```javascript
-const { generatePrivateKey } = require('viem');
-const key = generatePrivateKey(); // 0x + 64 hex chars
-```
+4. **Fund wallet** — Send $1-5 USDC + $0.10 POL on Polygon to the wallet address
 
-Or ask the user for an existing wallet key (MetaMask → Account → Export Private Key).
-
-**3. Configure** — Add to MCP client config:
+### MCP Config
 
 ```json
 {
   "mcpServers": {
     "drain": {
       "command": "drain-mcp",
-      "env": {
-        "DRAIN_PRIVATE_KEY": "0x_the_private_key"
-      }
+      "env": { "DRAIN_PRIVATE_KEY": "0x..." }
     }
   }
 }
 ```
 
-Config locations vary by client:
-- Cursor: `~/.cursor/mcp.json`
-- Claude Desktop: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Cline: MCP settings in VS Code
-- Windsurf: MCP config
-
-### Requires Human (the one thing agents cannot do)
-
-**4. Fund the wallet** — Ask the user to send to the wallet address on Polygon:
-- **$1–5 USDC** (for AI services)
-- **$0.10 POL** (for gas, one-time)
-
-After funding, the agent operates fully autonomously — provider discovery, channel management, payments, and AI requests are all handled by the MCP tools.
-
 ### Environment Variables
 
 | Variable | Required | Default |
 |----------|----------|---------|
-| `DRAIN_PRIVATE_KEY` | ✅ | - |
+| `DRAIN_PRIVATE_KEY` | Yes | — |
 | `DRAIN_CHAIN_ID` | No | 137 (Polygon) |
-| `DRAIN_RPC_URL` | No | https://polygon-rpc.com |
-| `DRAIN_MARKETPLACE_URL` | No | Auto-detected from directory |
-
-**RPC Note:** Free RPCs have rate limits. If you get "rate limit" errors, try:
-- `https://polygon-bor-rpc.publicnode.com` (PublicNode)
-- `https://rpc.ankr.com/polygon` (requires free API key)
-- Or use a paid RPC provider (Alchemy, Infura)
-
----
-
-## Lessons Learned (E2E Testing)
-
-### Cost Estimation is Conservative
-
-The MCP server estimates costs based on message length and model pricing. Actual costs are usually **much lower** (often 10-100x less than estimate). This is intentional to prevent over-spending, but means:
-- A $0.10 channel can handle **many more requests** than you might think
-- Don't worry if estimate seems high - actual cost will be lower
-
-**Example:** Estimated $0.01, actual cost $0.000005 (5 USDC wei)
-
-### Channel "claimed" vs "spent"
-
-When checking `drain_channel_status()`, you'll see:
-- `claimed`: Amount provider has claimed **on-chain** (usually 0 until they claim)
-- `remaining`: Deposit minus claimed (not minus spent)
-
-**Important:** Vouchers are signed off-chain. The provider can claim anytime, but usually waits to accumulate multiple payments to save gas.
-
-### RPC Rate Limits
-
-Free public RPCs (like `polygon-rpc.com`) have rate limits. If you see errors:
-1. Wait 10-15 seconds and retry
-2. Switch to a different RPC (see Environment Variables above)
-3. Use a paid RPC for production
-
-### Channel ID is Critical
-
-**Always persist the channelId!** If you lose it:
-- You cannot make more requests
-- You cannot close the channel (funds locked until expiry + provider claims)
-
-**Best practice:** Store channelId immediately after `drain_open_channel()` with:
-- Creation timestamp
-- Expiry timestamp  
-- Provider ID
-
-### Actual Costs are Tiny
-
-Real-world example from E2E test:
-- Channel: $0.10 USDC
-- Request: "What is 2+2?" → "Four."
-- Actual cost: **$0.000005** (5 USDC wei)
-- You could make **20,000 requests** with $0.10!
-
-This means small channels ($0.10-$0.50) are perfect for testing and light usage.
-
----
-
-## External Endpoints
-
-Every network request the MCP server makes is listed here. The private key **never** leaves your machine.
-
-| Endpoint | Method | Data Sent | Private Key Transmitted? |
-|---|---|---|---|
-| `handshake58.com/api/mcp/providers` | GET | Nothing (public catalog) | No |
-| `handshake58.com/api/directory/config` | GET | Nothing (reads fee wallet) | No |
-| `handshake58.com/api/channels/status` | GET | channelId (public on-chain) | No |
-| Provider `apiUrl` `/v1/chat/completions` | POST | Chat messages + signed voucher | No — only the EIP-712 **signature** is sent |
-| Polygon RPC (on-chain tx) | POST | Signed transactions | No — key signs locally, only the signature is broadcast |
+| `DRAIN_RPC_URL` | No | polygon-rpc.com |
 
 ---
 
 ## Security & Privacy
 
-**Private key handling:** `DRAIN_PRIVATE_KEY` is loaded into memory by the local MCP server process. It is used exclusively for:
-1. **EIP-712 voucher signing** — generates a cryptographic signature (off-chain, no network call)
-2. **On-chain transaction signing** — signs approve/open/close/transfer transactions locally before broadcasting to Polygon RPC
+### Key Handling
+`DRAIN_PRIVATE_KEY` is loaded into memory by the local MCP process. It is used for:
+1. EIP-712 voucher signing (off-chain, no network call)
+2. On-chain transaction signing (signed locally, only the signature is broadcast)
 
-The private key is **never transmitted** to Handshake58 servers, AI providers, or any third party. Only the resulting signatures are sent. Providers verify signatures against the on-chain channel state — they never need or receive the key itself.
+The key is never transmitted to any server. Providers verify signatures against on-chain state.
 
-**What leaves your machine:**
-- Public API queries to `handshake58.com` (provider list, fee wallet, channel status)
-- Chat messages to AI providers (sent to the provider's `apiUrl`, not to Handshake58)
-- Signed payment vouchers (contain a signature, not the key)
-- Signed on-chain transactions (broadcast to Polygon)
+### Spending Limits
+Exposure is capped by the smart contract:
+- Maximum spend = channel deposit (you choose the amount)
+- Channel has a fixed duration (you choose)
+- After expiry, unspent funds are reclaimable via drain_close_channel
+- No recurring charges, no stored payment methods
 
-**What stays local:**
-- Your private key (never transmitted)
-- Your wallet address derivation
-- All cryptographic signing operations
+### What Leaves Your Machine
+- Public API queries to handshake58.com (provider list, config, channel status)
+- Request messages to providers (sent to the provider's apiUrl, NOT to Handshake58)
+- Signed payment vouchers (contain a cryptographic signature, not the key)
+- Signed on-chain transactions (broadcast to Polygon RPC)
 
-**Recommended safeguards:**
-- Use a **dedicated ephemeral wallet** with $1–5 USDC. Never reuse your main wallet.
-- **Audit the source code** before installing: https://github.com/kimbo128/DRAIN
+### What Stays Local
+- Private key (never transmitted)
+- All cryptographic operations (signing happens in-process)
+
+### External Endpoints
+
+Every network request the MCP server makes:
+
+| Endpoint | Method | Data Sent | Key Transmitted? |
+|---|---|---|---|
+| handshake58.com/api/mcp/providers | GET | Nothing (public catalog) | No |
+| handshake58.com/api/directory/config | GET | Nothing (reads fee wallet) | No |
+| handshake58.com/api/channels/status | GET | channelId (public on-chain data) | No |
+| Provider apiUrl /v1/docs | GET | Nothing (fetches usage docs) | No |
+| Provider apiUrl /v1/chat/completions | POST | Request messages + signed voucher | No |
+| Polygon RPC (on-chain tx) | POST | Signed transactions | No |
+
+### Safeguards
+- Use a **dedicated wallet** with $1-5 USDC. Never reuse your main wallet.
+- **Audit the source**: https://github.com/kimbo128/DRAIN
 - Run in an **isolated environment** if handling sensitive data
-
----
-
-## Compatible Clients
-
-drain-mcp is an MCP server (not a CLI tool). It works with any MCP-compatible AI client:
-
-- **Cursor** — Add to `.cursor/mcp.json`
-- **Claude Desktop** — Add to `claude_desktop_config.json`
-- **Cline** — Add to MCP settings
-- **Windsurf** — Add to MCP config
-- **OpenAI Agents** — Via MCP bridge
-- Any agent that speaks Model Context Protocol
-
-Run `drain-mcp --help` for full documentation.
 
 ---
 

@@ -1,7 +1,7 @@
 /**
  * Provider Discovery Service
  * 
- * Discovers and fetches AI providers from the DRAIN directory.
+ * Discovers and fetches service providers from the DRAIN directory.
  */
 
 import type { DrainConfig } from '../config.js';
@@ -17,6 +17,8 @@ export interface ProviderModel {
   };
 }
 
+export type ProviderCategory = 'llm' | 'image' | 'audio' | 'code' | 'multi-modal' | 'scraping' | 'vpn' | 'other';
+
 export interface Provider {
   id: string;
   name: string;
@@ -24,6 +26,7 @@ export interface Provider {
   apiUrl: string;
   providerAddress: string;
   chainId: number;
+  category: ProviderCategory;
   docsUrl?: string;
   status: {
     online: boolean;
@@ -122,16 +125,16 @@ export class ProviderService {
    * Cached per provider ID to avoid repeated fetches.
    */
   async fetchDocs(provider: Provider): Promise<string | null> {
-    if (!provider.docsUrl) return null;
+    const url = provider.docsUrl || `${provider.apiUrl}/v1/docs`;
 
     const cached = this.docsCache.get(provider.id);
     if (cached) return cached;
 
     try {
-      const res = await fetch(provider.docsUrl, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) return null;
       const text = await res.text();
-      const trimmed = text.slice(0, 2000);
+      const trimmed = text.slice(0, 4000);
       this.docsCache.set(provider.id, trimmed);
       return trimmed;
     } catch {

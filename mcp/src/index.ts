@@ -1,30 +1,24 @@
 #!/usr/bin/env node
 /**
  * DRAIN MCP Server
- * 
- * Model Context Protocol server for autonomous AI payments.
- * Enables AI agents to pay for AI inference using DRAIN protocol.
+ *
+ * Model Context Protocol server for the DRAIN payment protocol.
+ * Agents discover providers, open USDC payment channels, and call any service.
  */
 
-// Handle --help before any imports that require configuration
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
-drain-mcp — MCP server for AI agent payments via Handshake58
+drain-mcp — MCP server for the DRAIN payment protocol
 
 WHAT IS THIS?
-  drain-mcp is a Model Context Protocol (MCP) server. It is NOT a standalone
-  CLI tool. It runs inside any MCP-compatible AI client and gives the AI
-  agent tools to discover providers, open payment channels, and call AI
-  services — all paid with USDC micropayments on Polygon.
+  drain-mcp is a Model Context Protocol (MCP) server. It runs inside any
+  MCP-compatible client and gives agents tools to discover service providers,
+  open USDC payment channels on Polygon, and call any service — LLM, image
+  generation, web scraping, VPN, and more. Pay per use, no API keys.
 
-COMPATIBLE CLIENTS (any MCP-compatible agent):
-  - Cursor          Add to .cursor/mcp.json
-  - Claude Desktop  Add to claude_desktop_config.json
-  - Cline           Add to MCP settings
-  - Windsurf        Add to MCP config
-  - OpenAI Agents   Via MCP bridge
-  - Any agent that speaks Model Context Protocol
+COMPATIBLE CLIENTS:
+  Cursor, Claude Desktop, Cline, Windsurf, OpenAI Agents, or any MCP client.
 
 CONFIGURATION:
   {
@@ -39,34 +33,26 @@ CONFIGURATION:
   }
 
 ENVIRONMENT VARIABLES:
-  DRAIN_PRIVATE_KEY     (required) Polygon wallet private key (0x + 64 hex chars)
-                        Use a dedicated wallet with minimal funds ($1-5 USDC)
-  DRAIN_CHAIN_ID        Chain ID: 137 (Polygon, default) or 80002 (Amoy testnet)
-  DRAIN_RPC_URL         Custom RPC endpoint (default: polygon-rpc.com)
+  DRAIN_PRIVATE_KEY     (required) Polygon wallet private key
+  DRAIN_CHAIN_ID        137 (Polygon, default) or 80002 (Amoy testnet)
+  DRAIN_RPC_URL         Custom RPC endpoint
   DRAIN_DIRECTORY_URL   Provider directory URL
   DRAIN_MARKETPLACE_URL Marketplace base URL
 
 MCP TOOLS PROVIDED:
-  drain_providers       List available AI providers and models
-  drain_provider_info   Get details for a specific provider
+  drain_providers       List service providers (filter by model, category)
+  drain_provider_info   Provider details + usage instructions (docs)
   drain_balance         Check wallet USDC balance and allowance
   drain_approve         Approve USDC spending for the DRAIN contract
   drain_open_channel    Open a payment channel with a provider
-  drain_close_channel   Close an expired channel and reclaim funds
-  drain_channel_status  Check the status of a payment channel
-  drain_chat            Send a chat completion request to a provider
+  drain_close_channel   Close expired channel and reclaim funds
+  drain_channel_status  Check channel status and balance
+  drain_channels        List all known channels with status
+  drain_chat            Send a paid request to a provider
 
-SETUP (agent can do most of this autonomously):
-  AGENT CAN DO:
-    1. Install drain-mcp (ask user to approve if needed)
-    2. Create a Polygon wallet key programmatically:
-         JavaScript: require('viem').generatePrivateKey()
-         Or ask user for an existing wallet key
-    3. Configure MCP client with the key
-
-  REQUIRES HUMAN (the one thing agents cannot do):
-    4. Fund the wallet on Polygon: $1-5 USDC + $0.10 POL for gas
-       Give the user the wallet address and ask them to send funds
+PROVIDER CATEGORIES:
+  llm, image, audio, code, scraping, vpn, multi-modal, other
+  Each provider has a docs endpoint explaining how to format requests.
 
 LINKS:
   Marketplace:  https://handshake58.com
@@ -96,7 +82,7 @@ import { InferenceService } from './services/inference.js';
 
 import { providerTools, listProviders, getProvider } from './tools/providers.js';
 import { balanceTools, getBalance, approveUsdc } from './tools/balance.js';
-import { channelTools, openChannel, closeChannel, getChannelStatus } from './tools/channel.js';
+import { channelTools, openChannel, closeChannel, getChannelStatus, listChannels } from './tools/channel.js';
 import { chatTools, chat } from './tools/chat.js';
 
 // ============================================================================
@@ -129,7 +115,7 @@ class DrainMcpServer {
     this.server = new Server(
       {
         name: 'drain-mcp',
-        version: '0.1.17',
+        version: '0.2.0',
       },
       {
         capabilities: {
@@ -163,7 +149,7 @@ class DrainMcpServer {
         switch (name) {
           // Provider tools
           case 'drain_providers':
-            result = await listProviders(this.providerService, args as { onlineOnly?: boolean; model?: string });
+            result = await listProviders(this.providerService, args as { onlineOnly?: boolean; model?: string; category?: string });
             break;
           case 'drain_provider_info':
             result = await getProvider(this.providerService, args as { providerId: string });
@@ -192,6 +178,9 @@ class DrainMcpServer {
             break;
           case 'drain_channel_status':
             result = await getChannelStatus(this.channelService, args as { channelId: string });
+            break;
+          case 'drain_channels':
+            result = await listChannels(this.channelService);
             break;
             
           // Chat tools
@@ -237,8 +226,8 @@ class DrainMcpServer {
         },
         {
           uri: 'drain://providers',
-          name: 'AI Providers',
-          description: 'List of available DRAIN AI providers',
+          name: 'Service Providers',
+          description: 'Available service providers with categories, pricing, and docs URLs',
           mimeType: 'text/markdown',
         },
       ],
