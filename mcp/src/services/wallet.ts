@@ -100,7 +100,7 @@ export class WalletService {
   }
 
   /**
-   * Transfer USDC to an address (used for marketplace session fee)
+   * Transfer USDC to an address
    */
   async transferUsdc(to: Address, amount: bigint): Promise<Hash> {
     const hash = await this.walletClient.writeContract({

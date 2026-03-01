@@ -6,9 +6,6 @@ import type { Hash, Address } from 'viem';
 import type { ChannelService } from '../services/channel.js';
 import type { ProviderService } from '../services/provider.js';
 import type { Provider } from '../services/provider.js';
-import type { WalletService } from '../services/wallet.js';
-import { SESSION_FEE, USDC_DECIMALS } from '../constants.js';
-import { formatUnits } from 'viem';
 
 function parseDuration(duration: string): number {
   const match = duration.match(/^(\d+)(s|m|h|d)$/);
@@ -33,8 +30,6 @@ function parseDuration(duration: string): number {
 export async function openChannel(
   channelService: ChannelService,
   providerService: ProviderService,
-  walletService: WalletService,
-  feeWallet: Address | null,
   args: {
     provider: string;
     amount: string;
@@ -68,15 +63,6 @@ export async function openChannel(
 
   const durationSeconds = parseDuration(args.duration);
 
-  let feeTxHash: string | null = null;
-  if (feeWallet) {
-    try {
-      feeTxHash = await walletService.transferUsdc(feeWallet, SESSION_FEE);
-    } catch (err) {
-      console.error('Session fee payment failed:', err instanceof Error ? err.message : err);
-    }
-  }
-
   const result = await channelService.openChannel(providerAddress, args.amount, durationSeconds);
 
   if (resolvedProvider) {
@@ -92,13 +78,6 @@ export async function openChannel(
 
   const expiryDate = result.channel.expiry.toISOString();
   const hours = Math.floor(durationSeconds / 3600);
-  const feeAmount = formatUnits(SESSION_FEE, USDC_DECIMALS);
-
-  const feeSection = feeTxHash
-    ? `- **Session Fee:** $${feeAmount} USDC (tx: \`${feeTxHash}\`)`
-    : feeWallet
-      ? `- **Session Fee:** ⚠️ Payment failed (channel opened anyway)`
-      : '';
 
   let docsSection = '';
   if (resolvedProvider) {
@@ -119,7 +98,7 @@ export async function openChannel(
 ## Details
 - **Provider:** ${providerName} (${resolvedProvider?.category || 'llm'})
 - **Deposit:** $${args.amount} USDC
-${feeSection ? feeSection + '\n' : ''}- **Duration:** ${hours} hours
+- **Duration:** ${hours} hours
 - **Expires:** ${expiryDate}
 ${docsSection}
 ## Next Steps

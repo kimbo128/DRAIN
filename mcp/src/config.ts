@@ -10,7 +10,7 @@ import { polygon, polygonAmoy } from 'viem/chains';
 
 // Contract addresses
 export const DRAIN_ADDRESSES: Record<number, Address> = {
-  137: '0x1C1918C99b6DcE977392E4131C91654d8aB71e64',    // Polygon Mainnet
+  137: '0x0C2B3aA1e80629D572b1f200e6DF3586B3946A8A',    // Polygon Mainnet
   80002: '0x73d16e39F0E4C0bfb8b3e41a2F721EcC0eDef74F',  // Polygon Amoy
 };
 

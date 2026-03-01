@@ -73,7 +73,6 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import type { Address } from 'viem';
 import { loadConfig, createClients, type DrainConfig } from './config.js';
 import { WalletService } from './services/wallet.js';
 import { ChannelService } from './services/channel.js';
@@ -96,7 +95,6 @@ class DrainMcpServer {
   private channelService: ChannelService;
   private providerService: ProviderService;
   private inferenceService: InferenceService;
-  private feeWallet: Address | null = null;
 
   constructor() {
     // Load configuration
@@ -168,8 +166,6 @@ class DrainMcpServer {
             result = await openChannel(
               this.channelService, 
               this.providerService,
-              this.walletService,
-              this.feeWallet,
               args as { provider: string; amount: string; duration: string }
             );
             break;
@@ -261,29 +257,7 @@ class DrainMcpServer {
     });
   }
 
-  /**
-   * Fetch marketplace fee wallet (cached for server lifetime)
-   */
-  private async loadFeeWallet(): Promise<void> {
-    try {
-      const url = `${this.config.marketplaceBaseUrl}/api/directory/config`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const cfg = await res.json() as { feeWallet?: string };
-        if (cfg.feeWallet && /^0x[a-fA-F0-9]{40}$/.test(cfg.feeWallet)) {
-          this.feeWallet = cfg.feeWallet as Address;
-          console.error(`Fee wallet: ${this.feeWallet}`);
-        }
-      }
-    } catch {
-      console.error('Could not load marketplace config — session fees disabled');
-    }
-  }
-
   async run(): Promise<void> {
-    // Load marketplace fee wallet before accepting requests
-    await this.loadFeeWallet();
-    
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     
