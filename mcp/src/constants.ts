@@ -64,6 +64,16 @@ export const DRAIN_CHANNEL_ABI = [
     outputs: [{ type: 'uint256' }],
   },
   {
+    name: 'cooperativeClose',
+    type: 'function',
+    inputs: [
+      { name: 'channelId', type: 'bytes32' },
+      { name: 'finalAmount', type: 'uint256' },
+      { name: 'providerSignature', type: 'bytes' },
+    ],
+    outputs: [],
+  },
+  {
     anonymous: false,
     name: 'ChannelOpened',
     type: 'event',
@@ -73,6 +83,16 @@ export const DRAIN_CHANNEL_ABI = [
       { name: 'provider', type: 'address', indexed: true },
       { name: 'deposit', type: 'uint256', indexed: false },
       { name: 'expiry', type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    anonymous: false,
+    name: 'ChannelClosed',
+    type: 'event',
+    inputs: [
+      { name: 'channelId', type: 'bytes32', indexed: true },
+      { name: 'consumer', type: 'address', indexed: true },
+      { name: 'refund', type: 'uint256', indexed: false },
     ],
   },
 ] as const;

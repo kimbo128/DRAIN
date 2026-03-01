@@ -45,10 +45,11 @@ MCP TOOLS PROVIDED:
   drain_balance         Check wallet USDC balance and allowance
   drain_approve         Approve USDC spending for the DRAIN contract
   drain_open_channel    Open a payment channel with a provider
-  drain_close_channel   Close expired channel and reclaim funds
-  drain_channel_status  Check channel status and balance
-  drain_channels        List all known channels with status
-  drain_chat            Send a paid request to a provider
+  drain_close_channel       Close expired channel and reclaim funds
+  drain_cooperative_close   Close channel immediately (provider co-signs)
+  drain_channel_status      Check channel status and balance
+  drain_channels            List all known channels with status
+  drain_chat                Send a paid request to a provider
 
 PROVIDER CATEGORIES:
   llm, image, audio, code, scraping, vpn, multi-modal, other
@@ -81,7 +82,7 @@ import { InferenceService } from './services/inference.js';
 
 import { providerTools, listProviders, getProvider } from './tools/providers.js';
 import { balanceTools, getBalance, approveUsdc } from './tools/balance.js';
-import { channelTools, openChannel, closeChannel, getChannelStatus, listChannels } from './tools/channel.js';
+import { channelTools, openChannel, closeChannel, cooperativeClose, getChannelStatus, listChannels } from './tools/channel.js';
 import { chatTools, chat } from './tools/chat.js';
 
 // ============================================================================
@@ -171,6 +172,13 @@ class DrainMcpServer {
             break;
           case 'drain_close_channel':
             result = await closeChannel(this.channelService, args as { channelId: string });
+            break;
+          case 'drain_cooperative_close':
+            result = await cooperativeClose(
+              this.channelService,
+              this.providerService,
+              args as { channelId: string }
+            );
             break;
           case 'drain_channel_status':
             result = await getChannelStatus(this.channelService, args as { channelId: string });

@@ -123,6 +123,52 @@ export async function closeChannel(
 The remaining balance has been returned to your wallet.`;
 }
 
+export async function cooperativeClose(
+  channelService: ChannelService,
+  providerService: ProviderService,
+  args: { channelId: string }
+): Promise<string> {
+  const channelId = args.channelId as Hash;
+
+  const meta = channelService.getChannelMeta(channelId);
+  let providerUrl: string | undefined;
+
+  if (meta?.providerId) {
+    const provider = await providerService.getProvider(meta.providerId);
+    if (provider) providerUrl = provider.apiUrl;
+  }
+
+  if (!providerUrl) {
+    const channel = await channelService.getChannel(channelId);
+    const allProviders = await providerService.getProviders();
+    const matched = allProviders.find(
+      p => p.providerAddress.toLowerCase() === channel.provider.toLowerCase()
+    );
+    if (matched) providerUrl = matched.apiUrl;
+  }
+
+  if (!providerUrl) {
+    throw new Error(
+      'Could not resolve provider API URL for this channel. ' +
+      'The channel may have been opened outside this session.'
+    );
+  }
+
+  const result = await channelService.cooperativeCloseChannel(channelId, providerUrl);
+
+  return `# Channel Cooperatively Closed
+
+**Channel ID:** \`${channelId}\`
+**Transaction:** \`${result.txHash}\`
+
+## Settlement
+- **Provider Payout:** $${result.payout} USDC
+- **Protocol Fee (2%):** $${result.fee} USDC
+- **Refunded to You:** $${result.refundAmount} USDC
+
+Channel closed immediately without waiting for expiry.`;
+}
+
 export async function getChannelStatus(
   channelService: ChannelService,
   args: { channelId: string }
@@ -260,6 +306,26 @@ Use this to:
         channelId: {
           type: 'string',
           description: 'The channel ID to check (0x...)',
+        },
+      },
+      required: ['channelId'],
+    },
+  },
+  {
+    name: 'drain_cooperative_close',
+    description: `Close a payment channel IMMEDIATELY by requesting a cooperative close from the provider.
+
+Unlike drain_close_channel (which requires waiting for expiry), this contacts the provider's API to get a close signature, then settles on-chain right away. The provider gets paid for actual usage, the 2% protocol fee is deducted, and the remaining deposit is refunded to your wallet.
+
+Use this when you're done with a channel and want your funds back now.
+
+Falls back to drain_close_channel if the provider is offline or refuses.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channelId: {
+          type: 'string',
+          description: 'The channel ID to close (0x...)',
         },
       },
       required: ['channelId'],

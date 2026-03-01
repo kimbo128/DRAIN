@@ -228,6 +228,58 @@ export class ChannelService {
   }
 
   /**
+   * Cooperative close: ask provider for a close signature, then close on-chain immediately
+   */
+  async cooperativeCloseChannel(
+    channelId: Hash,
+    providerApiUrl: string
+  ): Promise<{ txHash: Hash; refundAmount: string; payout: string; fee: string }> {
+    const res = await fetch(`${providerApiUrl}/v1/close-channel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channelId }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Provider refused cooperative close (HTTP ${res.status}): ${body.slice(0, 200)}`);
+    }
+
+    const { finalAmount, signature } = await res.json() as { finalAmount: string; signature: string };
+
+    const channelData = await this.getChannelRaw(channelId);
+    const finalAmountBn = BigInt(finalAmount);
+    const refund = channelData.deposit - finalAmountBn;
+    const payout = finalAmountBn - channelData.claimed;
+    const feeBps = 200n;
+    const fee = (payout * feeBps) / 10000n;
+
+    const hash = await this.walletClient.writeContract({
+      account: this.account,
+      address: this.config.drainAddress,
+      abi: DRAIN_CHANNEL_ABI,
+      functionName: 'cooperativeClose',
+      args: [channelId, finalAmountBn, signature as Hex],
+      chain: this.config.chain,
+    });
+
+    await this.publicClient.waitForTransactionReceipt({ hash });
+
+    this.nonces.delete(channelId);
+    this.spending.delete(channelId);
+    this.channelMeta.delete(channelId);
+    this.saveChannelMeta();
+
+    return {
+      txHash: hash,
+      refundAmount: formatUnits(refund, USDC_DECIMALS),
+      payout: formatUnits(payout, USDC_DECIMALS),
+      fee: formatUnits(fee, USDC_DECIMALS),
+    };
+  }
+
+  /**
    * Get channel details (raw)
    */
   async getChannelRaw(channelId: Hash): Promise<Channel> {
