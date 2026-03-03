@@ -54,6 +54,8 @@ export interface ChannelMeta {
   deposit?: string;
   expiry?: number;
   openedAt?: number;
+  nonce?: number;
+  spending?: string;
 }
 
 export class ChannelService {
@@ -79,10 +81,14 @@ export class ChannelService {
       if (existsSync(this.channelsFile)) {
         const data = JSON.parse(readFileSync(this.channelsFile, 'utf-8'));
         for (const [k, v] of Object.entries(data)) {
+          const key = k as Hash;
           if (typeof v === 'string') {
-            this.channelMeta.set(k as Hash, { providerId: v });
+            this.channelMeta.set(key, { providerId: v });
           } else {
-            this.channelMeta.set(k as Hash, v as ChannelMeta);
+            const meta = v as ChannelMeta;
+            this.channelMeta.set(key, meta);
+            if (meta.nonce != null) this.nonces.set(key, BigInt(meta.nonce));
+            if (meta.spending != null) this.spending.set(key, BigInt(meta.spending));
           }
         }
       }
@@ -93,7 +99,11 @@ export class ChannelService {
     try {
       const obj: Record<string, ChannelMeta> = {};
       for (const [k, v] of this.channelMeta.entries()) {
-        obj[k] = v;
+        obj[k] = {
+          ...v,
+          nonce: Number(this.nonces.get(k) ?? 0n),
+          spending: (this.spending.get(k) ?? 0n).toString(),
+        };
       }
       writeFileSync(this.channelsFile, JSON.stringify(obj, null, 2));
     } catch { /* non-fatal */ }
@@ -355,9 +365,10 @@ export class ChannelService {
       },
     });
     
-    // Update tracking
+    // Update tracking and persist
     this.nonces.set(channelId, nonce);
     this.spending.set(channelId, newTotal);
+    this.saveChannelMeta();
     
     return {
       channelId,

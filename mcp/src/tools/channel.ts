@@ -63,6 +63,28 @@ export async function openChannel(
 
   const durationSeconds = parseDuration(args.duration);
 
+  if (resolvedProvider) {
+    try {
+      const pingUrl = `${resolvedProvider.apiUrl}/v1/models`;
+      const ping = await fetch(pingUrl, { signal: AbortSignal.timeout(8000) });
+      if (!ping.ok && ping.status !== 402) {
+        throw new Error(`Provider returned HTTP ${ping.status}`);
+      }
+    } catch (err: any) {
+      if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+        throw new Error(
+          `Provider "${resolvedProvider.name}" is not responding (timeout). ` +
+          `Do NOT open a channel — your funds would be locked until expiry. ` +
+          `Use drain_providers to find an alternative.`
+        );
+      }
+      throw new Error(
+        `Provider "${resolvedProvider.name}" is unreachable: ${err.message}. ` +
+        `Do NOT open a channel to a dead provider. Use drain_providers to find an alternative.`
+      );
+    }
+  }
+
   const result = await channelService.openChannel(providerAddress, args.amount, durationSeconds);
 
   if (resolvedProvider) {

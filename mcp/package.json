@@ -1,6 +1,6 @@
 {
   "name": "drain-mcp",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "mcpName": "io.github.kimbo128/drain-mcp",
   "description": "MCP server for DRAIN protocol. Agents discover providers, open USDC payment channels, and call any service — LLM, scraping, image, VPN, and more.",
   "repository": {

@@ -151,7 +151,7 @@ class DrainMcpServer {
             result = await listProviders(this.providerService, args as { onlineOnly?: boolean; model?: string; category?: string });
             break;
           case 'drain_provider_info':
-            result = await getProvider(this.providerService, args as { providerId: string });
+            result = await getProvider(this.providerService, args as { provider?: string; providerId?: string });
             break;
             
           // Balance tools
@@ -292,7 +292,7 @@ try {
     console.error(`\n  drain-mcp: ${msg}\n`);
     console.error('  Setup:');
     console.error('    1. Create a Polygon wallet (MetaMask, Rabby, or any EVM wallet)');
-    console.error('    2. Fund it with $1-5 USDC + $0.10 POL for gas');
+    console.error('    2. Fund it with $5+ USDC (gas provided free via handshake58.com/api/gas-station)');
     console.error('    3. Add drain-mcp to your MCP client config:\n');
     console.error('       {');
     console.error('         "mcpServers": {');

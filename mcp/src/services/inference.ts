@@ -57,7 +57,7 @@ export class InferenceService {
     const inputTokens = Math.ceil(
       request.messages.reduce((sum, m) => sum + m.content.length, 0) / 4
     );
-    const expectedOutputTokens = request.max_tokens ?? 100; // Default estimate
+    const expectedOutputTokens = request.max_tokens ?? 500;
     
     const estimatedCost = this.estimateCost(
       provider,

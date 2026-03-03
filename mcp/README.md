@@ -97,7 +97,7 @@ Categories: `llm`, `image`, `audio`, `code`, `scraping`, `vpn`, `multi-modal`, `
 Get details about a provider including usage instructions (docs). The docs explain how to format requests for that provider.
 
 ```json
-{ "providerId": "hs58-openai" }
+{ "provider": "hs58-openai" }
 ```
 
 ### Wallet

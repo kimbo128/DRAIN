@@ -21,12 +21,10 @@ function formatProvider(p: Provider): string {
 
   return `
 ## ${p.name}
-- **ID:** ${p.id}
+- **ID:** \`${p.id}\`  ← use this with drain_provider_info / drain_open_channel
 - **Category:** ${p.category || 'llm'}
 - **Status:** ${status}
 - **Latency:** ${latency}
-- **Address:** ${p.providerAddress}
-- **API:** ${p.apiUrl}
 - **Docs:** ${docsUrl}
 - **Chain:** ${p.chainId === 137 ? 'Polygon Mainnet' : 'Polygon Amoy'}
 
@@ -67,14 +65,16 @@ export async function listProviders(
 
   const formatted = providers.map(formatProvider).join('\n\n---\n\n');
 
-  return `# DRAIN Providers\n\nFound ${providers.length} provider(s):\n\n${formatted}`;
+  return `# DRAIN Providers\n\nFound ${providers.length} provider(s).\n\n**Usage:** Pass the provider **ID** to \`drain_provider_info(provider: "<ID>")\` for docs, or to \`drain_open_channel(provider: "<ID>", ...)\` to open a channel.\n\n${formatted}`;
 }
 
 export async function getProvider(
   providerService: ProviderService,
-  args: { providerId: string }
+  args: { provider?: string; providerId?: string }
 ): Promise<string> {
-  const provider = await providerService.getProvider(args.providerId);
+  const id = args.provider || args.providerId;
+  if (!id) return 'Missing provider ID. Pass the provider ID from drain_providers output.';
+  const provider = await providerService.getProvider(id);
 
   if (!provider) {
     return `Provider "${args.providerId}" not found.`;
@@ -133,12 +133,12 @@ For non-LLM providers this is essential — the docs specify the expected JSON p
     inputSchema: {
       type: 'object',
       properties: {
-        providerId: {
+        provider: {
           type: 'string',
-          description: 'The provider ID to look up',
+          description: 'The provider ID to look up (from drain_providers output)',
         },
       },
-      required: ['providerId'],
+      required: ['provider'],
     },
   },
 ];
