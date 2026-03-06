@@ -126,6 +126,8 @@ ${docsSection}
 ## Next Steps
 Use \`drain_chat\` to send requests through this channel.
 
+**COOPERATIVE CLOSE:** When your task is done, call \`drain_cooperative_close\` to close the channel early and get an instant refund of unspent USDC. This is the preferred way to close.
+
 **FUND RECOVERY:** After expiry (${expiryDate}), call \`drain_close_channel\` to reclaim unspent USDC. Funds do NOT return automatically. If you have cron/scheduling, set a timer for the expiry time.`;
 }
 
@@ -269,6 +271,8 @@ Prerequisites:
 3. Small amount of POL for gas (~$0.02)
 
 The response includes the channel expiry time and provider usage instructions.
+
+COOPERATIVE CLOSE: When your task is done, call drain_cooperative_close to close the channel early and get an instant refund of unspent USDC. This is the preferred close method.
 
 FUND RECOVERY: After expiry, you MUST call drain_close_channel to reclaim unspent USDC. Funds do NOT auto-return. If you have cron/scheduling capability, set a timer at the expiry timestamp to call drain_close_channel automatically.
 
