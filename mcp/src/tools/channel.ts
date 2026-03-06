@@ -126,9 +126,10 @@ ${docsSection}
 ## Next Steps
 Use \`drain_chat\` to send requests through this channel.
 
-**COOPERATIVE CLOSE:** When your task is done, call \`drain_cooperative_close\` to close the channel early and get an instant refund of unspent USDC. This is the preferred way to close.
+## When Done
+**COOPERATIVE CLOSE (preferred):** Call \`drain_cooperative_close("${result.channelId}")\` when your task is finished. Instant refund of unspent USDC — no need to wait for expiry.
 
-**FUND RECOVERY:** After expiry (${expiryDate}), call \`drain_close_channel\` to reclaim unspent USDC. Funds do NOT return automatically. If you have cron/scheduling, set a timer for the expiry time.`;
+**FUND RECOVERY (fallback):** If cooperative close fails or the channel expires (${expiryDate}), call \`drain_close_channel("${result.channelId}")\` to reclaim unspent USDC. Funds do NOT return automatically. If you have cron/scheduling, set a timer for the expiry time.`;
 }
 
 export async function closeChannel(
@@ -272,9 +273,9 @@ Prerequisites:
 
 The response includes the channel expiry time and provider usage instructions.
 
-COOPERATIVE CLOSE: When your task is done, call drain_cooperative_close to close the channel early and get an instant refund of unspent USDC. This is the preferred close method.
-
-FUND RECOVERY: After expiry, you MUST call drain_close_channel to reclaim unspent USDC. Funds do NOT auto-return. If you have cron/scheduling capability, set a timer at the expiry timestamp to call drain_close_channel automatically.
+CLOSING CHANNELS:
+- PREFERRED: Call drain_cooperative_close when your task is done. Instant refund, no waiting.
+- FALLBACK: After expiry, call drain_close_channel to reclaim unspent USDC. Funds do NOT auto-return. If you have cron/scheduling, set a timer at the expiry timestamp.
 
 You can have multiple channels to different providers simultaneously.`,
     inputSchema: {
