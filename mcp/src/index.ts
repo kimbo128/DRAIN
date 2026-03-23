@@ -40,7 +40,7 @@ ENVIRONMENT VARIABLES:
   DRAIN_MARKETPLACE_URL Marketplace base URL
 
 MCP TOOLS PROVIDED:
-  drain_providers       List service providers (filter by model, category)
+  drain_providers       List service providers (filter by model, category, protocol)
   drain_provider_info   Provider details + usage instructions (docs)
   drain_balance         Check wallet USDC balance and allowance
   drain_approve         Approve USDC spending for the DRAIN contract
@@ -49,7 +49,13 @@ MCP TOOLS PROVIDED:
   drain_cooperative_close   Close channel immediately (provider co-signs)
   drain_channel_status      Check channel status and balance
   drain_channels            List all known channels with status
-  drain_chat                Send a paid request to a provider
+  drain_chat                Send a paid request via DRAIN channel
+  mpp_chat                  Send a per-request payment to an MPP provider
+  drain_feedback            Report quality feedback (success/failure)
+
+PROTOCOLS:
+  DRAIN — Payment channels on Polygon. Use drain_open_channel -> drain_chat.
+  MPP   — Per-request HTTP 402 payments. Use mpp_chat directly.
 
 PROVIDER CATEGORIES:
   llm, image, audio, code, scraping, vpn, multi-modal, other
@@ -79,11 +85,14 @@ import { WalletService } from './services/wallet.js';
 import { ChannelService } from './services/channel.js';
 import { ProviderService } from './services/provider.js';
 import { InferenceService } from './services/inference.js';
+import { TelemetryService } from './services/telemetry.js';
 
 import { providerTools, listProviders, getProvider } from './tools/providers.js';
 import { balanceTools, getBalance, approveUsdc } from './tools/balance.js';
 import { channelTools, openChannel, closeChannel, cooperativeClose, getChannelStatus, listChannels } from './tools/channel.js';
 import { chatTools, chat } from './tools/chat.js';
+import { mppTools, mppChat } from './tools/mpp.js';
+import { feedbackTools, submitFeedback } from './tools/feedback.js';
 
 // ============================================================================
 // SERVER SETUP
@@ -96,25 +105,24 @@ class DrainMcpServer {
   private channelService: ChannelService;
   private providerService: ProviderService;
   private inferenceService: InferenceService;
+  private telemetryService: TelemetryService;
 
   constructor() {
-    // Load configuration
     this.config = loadConfig();
     
-    // Create clients
     const { account, walletClient, publicClient } = createClients(this.config);
     
-    // Initialize services
     this.walletService = new WalletService(publicClient, walletClient, account, this.config);
     this.channelService = new ChannelService(publicClient, walletClient, account, this.config);
     this.providerService = new ProviderService(this.config);
     this.inferenceService = new InferenceService(this.channelService);
+    this.telemetryService = new TelemetryService(this.config, account.address);
     
     // Create MCP server
     this.server = new Server(
       {
         name: 'drain-mcp',
-        version: '0.2.0',
+        version: '0.3.0',
       },
       {
         capabilities: {
@@ -135,6 +143,8 @@ class DrainMcpServer {
         ...balanceTools,
         ...channelTools,
         ...chatTools,
+        ...mppTools,
+        ...feedbackTools,
       ],
     }));
 
@@ -148,7 +158,7 @@ class DrainMcpServer {
         switch (name) {
           // Provider tools
           case 'drain_providers':
-            result = await listProviders(this.providerService, args as { onlineOnly?: boolean; model?: string; category?: string });
+            result = await listProviders(this.providerService, args as { onlineOnly?: boolean; model?: string; category?: string; protocol?: string });
             break;
           case 'drain_provider_info':
             result = await getProvider(this.providerService, args as { provider?: string; providerId?: string });
@@ -193,12 +203,41 @@ class DrainMcpServer {
               this.channelService,
               this.providerService,
               this.inferenceService,
+              this.telemetryService,
               args as {
                 channelId: string;
                 model: string;
                 messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
                 maxTokens?: number;
                 temperature?: number;
+              }
+            );
+            break;
+
+          // MPP tools
+          case 'mpp_chat':
+            result = await mppChat(
+              this.providerService,
+              this.telemetryService,
+              args as {
+                provider: string;
+                messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+                model?: string;
+                maxTokens?: number;
+                temperature?: number;
+              }
+            );
+            break;
+
+          // Feedback tools
+          case 'drain_feedback':
+            result = await submitFeedback(
+              this.config,
+              args as {
+                providerId: string;
+                outcome: 'success' | 'failure';
+                reason?: string;
+                protocol?: string;
               }
             );
             break;

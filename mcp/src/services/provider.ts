@@ -27,6 +27,9 @@ export interface Provider {
   providerAddress: string;
   chainId: number;
   category: ProviderCategory;
+  protocol?: string;
+  qualityScore?: number;
+  mppEndpoint?: string;
   docsUrl?: string;
   status: {
     online: boolean;

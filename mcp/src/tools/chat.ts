@@ -8,6 +8,7 @@ import type { Hash } from 'viem';
 import type { ChannelService } from '../services/channel.js';
 import type { ProviderService } from '../services/provider.js';
 import type { InferenceService, ChatMessage } from '../services/inference.js';
+import type { TelemetryService } from '../services/telemetry.js';
 
 /**
  * Make a chat completion request
@@ -16,6 +17,7 @@ export async function chat(
   channelService: ChannelService,
   providerService: ProviderService,
   inferenceService: InferenceService,
+  telemetryService: TelemetryService,
   args: {
     channelId: string;
     model: string;
@@ -25,16 +27,14 @@ export async function chat(
   }
 ): Promise<string> {
   const channelId = args.channelId as Hash;
+  const start = Date.now();
   
-  // Get channel to find provider
   const channel = await channelService.getChannel(channelId);
   
   if (channel.isExpired) {
     throw new Error('Channel has expired. Open a new channel to continue.');
   }
   
-  // Find provider — prefer stored ID (handles multiple providers sharing one wallet),
-  // fall back to address match for channels opened before this fix
   const providers = await providerService.getProviders();
   const storedProviderId = channelService.getProviderId(channelId);
   const provider = storedProviderId
@@ -45,30 +45,47 @@ export async function chat(
     throw new Error(`Provider ${channel.provider} not found in directory. The channel may be for an unlisted provider.`);
   }
   
-  // Check model is available
   const modelInfo = provider.models.find(m => m.id === args.model);
   if (!modelInfo) {
     const availableModels = provider.models.map(m => m.id).join(', ');
     throw new Error(`Model "${args.model}" not available from this provider. Available: ${availableModels}`);
   }
   
-  // Make the request
-  const response = await inferenceService.chat(provider, channelId, {
-    model: args.model,
-    messages: args.messages,
-    max_tokens: args.maxTokens,
-    temperature: args.temperature,
-  });
-  
-  // Format response
-  const assistantMessage = response.choices[0]?.message?.content ?? '';
-  const cost = response.drain?.cost ?? 'unknown';
-  const totalSpent = response.drain?.totalSpent ?? 'unknown';
-  
-  return `${assistantMessage}
+  try {
+    const response = await inferenceService.chat(provider, channelId, {
+      model: args.model,
+      messages: args.messages,
+      max_tokens: args.maxTokens,
+      temperature: args.temperature,
+    });
 
----
-*Cost: $${formatCost(cost)} USDC | Total spent: $${formatCost(totalSpent)} USDC | Tokens: ${response.usage.total_tokens}*`;
+    const latency = Date.now() - start;
+    const cost = response.drain?.cost ?? '0';
+    const costUsdc = parseFloat(cost) / 1_000_000;
+
+    telemetryService.report({
+      providerId: provider.id,
+      latencyMs: latency,
+      httpStatus: 200,
+      costUsdc: isNaN(costUsdc) ? 0 : costUsdc,
+      protocol: 'drain',
+    });
+
+    const assistantMessage = response.choices[0]?.message?.content ?? '';
+    const totalSpent = response.drain?.totalSpent ?? 'unknown';
+    
+    return `${assistantMessage}\n\n---\n*Cost: $${formatCost(cost)} USDC | Total spent: $${formatCost(totalSpent)} USDC | Tokens: ${response.usage.total_tokens}*`;
+  } catch (error) {
+    const latency = Date.now() - start;
+    telemetryService.report({
+      providerId: provider.id,
+      latencyMs: latency,
+      httpStatus: 0,
+      costUsdc: 0,
+      protocol: 'drain',
+    });
+    throw error;
+  }
 }
 
 /**

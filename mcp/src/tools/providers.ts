@@ -18,15 +18,20 @@ function formatProvider(p: Provider): string {
   const latency = p.status.latencyMs ? `${p.status.latencyMs}ms` : 'N/A';
   const docsUrl = p.docsUrl || `${p.apiUrl}/v1/docs`;
   const models = p.models.map(m => `  - ${m.name} (${formatPricing(m)})`).join('\n');
+  const protocol = p.protocol || 'drain';
+  const quality = p.qualityScore && p.qualityScore > 0 ? ` | Q: ${p.qualityScore.toFixed(2)}` : '';
+  const tool = protocol === 'mpp' ? 'mpp_chat' : 'drain_chat';
 
   return `
 ## ${p.name}
-- **ID:** \`${p.id}\`  ← use this with drain_provider_info / drain_open_channel
+- **ID:** \`${p.id}\`  ← use this with drain_provider_info / ${protocol === 'mpp' ? 'mpp_chat' : 'drain_open_channel'}
+- **Protocol:** ${protocol.toUpperCase()}${quality}
 - **Category:** ${p.category || 'llm'}
 - **Status:** ${status}
 - **Latency:** ${latency}
 - **Docs:** ${docsUrl}
-- **Chain:** ${p.chainId === 137 ? 'Polygon Mainnet' : 'Polygon Amoy'}
+- **Tool:** ${tool}
+${p.mppEndpoint ? `- **MPP Endpoint:** ${p.mppEndpoint}` : `- **Chain:** ${p.chainId === 137 ? 'Polygon Mainnet' : 'Polygon Amoy'}`}
 
 **Description:** ${p.description}
 
@@ -37,7 +42,7 @@ ${models}
 
 export async function listProviders(
   providerService: ProviderService,
-  args: { onlineOnly?: boolean; model?: string; category?: string }
+  args: { onlineOnly?: boolean; model?: string; category?: string; protocol?: string }
 ): Promise<string> {
   let providers: Provider[];
 
@@ -53,6 +58,10 @@ export async function listProviders(
     providers = providers.filter(p => (p.category || 'llm') === args.category);
   }
 
+  if (args.protocol) {
+    providers = providers.filter(p => (p.protocol || 'drain') === args.protocol);
+  }
+
   if (providers.length === 0) {
     if (args.model) {
       return `No providers found supporting model "${args.model}".`;
@@ -60,12 +69,15 @@ export async function listProviders(
     if (args.category) {
       return `No providers found in category "${args.category}".`;
     }
+    if (args.protocol) {
+      return `No providers found with protocol "${args.protocol}".`;
+    }
     return 'No providers available in the directory.';
   }
 
   const formatted = providers.map(formatProvider).join('\n\n---\n\n');
 
-  return `# DRAIN Providers\n\nFound ${providers.length} provider(s).\n\n**Usage:** Pass the provider **ID** to \`drain_provider_info(provider: "<ID>")\` for docs, or to \`drain_open_channel(provider: "<ID>", ...)\` to open a channel.\n\n${formatted}`;
+  return `# Providers\n\nFound ${providers.length} provider(s).\n\n**DRAIN providers:** Use \`drain_open_channel\` → \`drain_chat\` → \`drain_cooperative_close\`\n**MPP providers:** Use \`mpp_chat\` directly (no channel needed)\n\n${formatted}`;
 }
 
 export async function getProvider(
@@ -96,15 +108,17 @@ export async function getProvider(
 export const providerTools = [
   {
     name: 'drain_providers',
-    description: `List available service providers on the DRAIN marketplace.
+    description: `List available service providers on the Handshake58 marketplace.
+
+Supports two payment protocols:
+- DRAIN: Payment channels on Polygon. Use drain_open_channel → drain_chat → drain_cooperative_close.
+- MPP: Per-request HTTP 402 payments. Use mpp_chat directly (no channel needed).
 
 Providers offer diverse services by category: llm, image, audio, code, scraping, vpn, multi-modal, other. Each provider has a docs endpoint with usage instructions for that service.
 
 For any provider that is not category "llm", read its docs (via drain_provider_info) before sending requests to learn the expected message format.
 
-You can open channels to multiple providers simultaneously for multi-service workflows.
-
-Returns: Providers with category, models/services, pricing, docs URL, and online status.`,
+Returns: Providers with protocol, category, quality score, pricing, and online status.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -119,6 +133,11 @@ Returns: Providers with category, models/services, pricing, docs URL, and online
         category: {
           type: 'string',
           description: 'Filter by service category: llm, image, audio, code, scraping, vpn, multi-modal, other',
+        },
+        protocol: {
+          type: 'string',
+          enum: ['drain', 'mpp'],
+          description: 'Filter by payment protocol: "drain" (channels) or "mpp" (per-request)',
         },
       },
     },

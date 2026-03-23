@@ -1,8 +1,8 @@
 {
   "name": "drain-mcp",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "mcpName": "io.github.kimbo128/drain-mcp",
-  "description": "MCP server for DRAIN protocol. Agents discover providers, open USDC payment channels, and call any service — LLM, scraping, image, VPN, and more.",
+  "description": "MCP server for the Handshake58 AI marketplace. DRAIN payment channels, MPP per-request payments, quality feedback. Agents discover providers, pay, and report.",
   "repository": {
     "type": "git",
     "url": "https://github.com/kimbo128/DRAIN.git"
@@ -22,13 +22,15 @@
     "mcp",
     "model-context-protocol",
     "drain",
+    "mpp",
     "ai-agent",
     "ai-payments",
+    "ai-marketplace",
     "micropayments",
     "polygon",
     "usdc",
-    "crypto",
-    "inference"
+    "http-402",
+    "quality-oracle"
   ],
   "author": "Handshake58",
   "license": "MIT",
