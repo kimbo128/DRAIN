@@ -13,6 +13,11 @@ function formatPricing(m: Provider['models'][0]): string {
   return `$${m.pricing.inputPer1kTokens} in / $${m.pricing.outputPer1kTokens} out per 1k tokens`;
 }
 
+function mppToolName(p: Provider): string {
+  if (p.mppType === 'rest') return 'mpp_request';
+  return 'mpp_chat';
+}
+
 function formatProvider(p: Provider): string {
   const status = p.status.online ? '🟢 ONLINE' : '🔴 OFFLINE';
   const latency = p.status.latencyMs ? `${p.status.latencyMs}ms` : 'N/A';
@@ -20,12 +25,13 @@ function formatProvider(p: Provider): string {
   const models = p.models.map(m => `  - ${m.name} (${formatPricing(m)})`).join('\n');
   const protocol = p.protocol || 'drain';
   const quality = p.qualityScore && p.qualityScore > 0 ? ` | Q: ${p.qualityScore.toFixed(2)}` : '';
-  const tool = protocol === 'mpp' ? 'mpp_chat' : 'drain_chat';
+  const tool = protocol === 'mpp' ? mppToolName(p) : 'drain_chat';
+  const typeTag = p.mppType ? ` (${p.mppType.toUpperCase()})` : '';
 
   return `
 ## ${p.name}
-- **ID:** \`${p.id}\`  ← use this with drain_provider_info / ${protocol === 'mpp' ? 'mpp_chat' : 'drain_open_channel'}
-- **Protocol:** ${protocol.toUpperCase()}${quality}
+- **ID:** \`${p.id}\`  ← use this with drain_provider_info / ${protocol === 'mpp' ? mppToolName(p) : 'drain_open_channel'}
+- **Protocol:** ${protocol.toUpperCase()}${typeTag}${quality}
 - **Category:** ${p.category || 'llm'}
 - **Status:** ${status}
 - **Latency:** ${latency}
@@ -77,7 +83,7 @@ export async function listProviders(
 
   const formatted = providers.map(formatProvider).join('\n\n---\n\n');
 
-  return `# Providers\n\nFound ${providers.length} provider(s).\n\n**DRAIN providers:** Use \`drain_open_channel\` → \`drain_chat\` → \`drain_cooperative_close\`\n**MPP providers:** Use \`mpp_chat\` directly (no channel needed)\n\n${formatted}`;
+  return `# Providers\n\nFound ${providers.length} provider(s).\n\n**DRAIN providers:** Use \`drain_open_channel\` → \`drain_chat\` → \`drain_cooperative_close\`\n**MPP LLM providers:** Use \`mpp_chat\` (auto-pay via Tempo)\n**MPP REST providers:** Use \`mpp_request\` (auto-pay via Tempo)\n\nPayment is automatic for MPP — no channel needed.\n\n${formatted}`;
 }
 
 export async function getProvider(

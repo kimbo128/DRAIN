@@ -21,7 +21,7 @@ export async function getBalance(
   const hasGas = parseFloat(nativeBalance.formatted) > 0.01;
   const hasAllowance = parseFloat(allowance.formatted) > 0;
   
-  return `# Wallet Status
+  let result = `# Wallet Status
 
 **Address:** \`${address}\`
 **Network:** ${network}
@@ -35,10 +35,28 @@ export async function getBalance(
 - **Contract:** \`${config.drainAddress}\`
 
 ## Status
-${parseFloat(usdcBalance.formatted) > 0 ? '✅' : '⚠️'} USDC Balance: ${parseFloat(usdcBalance.formatted) > 0 ? 'OK' : 'LOW - need USDC to open channels'}
-${hasGas ? '✅' : '⚠️'} Gas: ${hasGas ? 'OK' : 'LOW - need POL for transactions'}
+${parseFloat(usdcBalance.formatted) > 0 ? '✅' : '⚠️'} USDC Balance: ${parseFloat(usdcBalance.formatted) > 0 ? 'OK' : 'LOW - need USDC to open channels. Get free credits with an invite code at handshake58.com/join/<code>'}
+${hasGas ? '✅' : '⚠️'} Gas: ${hasGas ? 'OK' : `LOW - need POL for transactions${parseFloat(usdcBalance.formatted) >= 5 ? ' — requesting from Gas Station...' : '. Fund with $5+ USDC and gas is provided free, or use an invite code at handshake58.com/join/<code>'}`}
 ${hasAllowance ? '✅' : 'ℹ️'} Allowance: ${hasAllowance ? 'Approved' : 'Not yet approved - will need to approve before opening channel'}
 `;
+
+  if (!hasGas && parseFloat(usdcBalance.formatted) >= 5) {
+    try {
+      const gasRes = await fetch(`${config.marketplaceBaseUrl || 'https://handshake58.com'}/api/gas-station`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+      const gasData = await gasRes.json() as { success?: boolean; txHash?: string; error?: string };
+      if (gasRes.ok && gasData.success) {
+        result += `\n🔋 **Gas Station:** 0.1 POL sent automatically! TX: \`${gasData.txHash}\`\nWait ~5 seconds, then proceed with drain_approve and drain_open_channel.`;
+      } else if (gasData.error) {
+        result += `\nℹ️ Gas Station: ${gasData.error}`;
+      }
+    } catch {}
+  }
+
+  return result;
 }
 
 /**

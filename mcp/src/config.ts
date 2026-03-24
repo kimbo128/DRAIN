@@ -40,6 +40,7 @@ export interface DrainConfig {
   drainAddress: Address;
   usdcAddress: Address;
   chain: Chain;
+  mppMaxDeposit: string;
 }
 
 /**
@@ -71,6 +72,8 @@ export function loadConfig(): DrainConfig {
   const usdcAddress = USDC_ADDRESSES[chainId];
   const chain = CHAINS[chainId];
   
+  const mppMaxDeposit = process.env.DRAIN_MPP_MAX_DEPOSIT || '1';
+
   return {
     privateKey: privateKey as `0x${string}`,
     chainId,
@@ -80,6 +83,7 @@ export function loadConfig(): DrainConfig {
     drainAddress,
     usdcAddress,
     chain,
+    mppMaxDeposit,
   };
 }
 

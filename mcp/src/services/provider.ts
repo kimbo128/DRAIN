@@ -30,6 +30,7 @@ export interface Provider {
   protocol?: string;
   qualityScore?: number;
   mppEndpoint?: string;
+  mppType?: 'llm' | 'rest';
   docsUrl?: string;
   status: {
     online: boolean;

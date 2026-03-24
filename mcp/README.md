@@ -2,20 +2,27 @@
 
 **Payments for AI Agents** — No API keys, no credit cards, no subscriptions.
 
-MCP server for the DRAIN payment protocol. Agents discover service providers, open USDC payment channels on Polygon, and call any service — LLM inference, web scraping, image generation, VPN, and more.
+MCP server for the [Handshake58 AI Marketplace](https://handshake58.com). Agents discover service providers, pay automatically, and call any service — LLM inference, web scraping, image generation, search, and more.
 
-- **One-time gas cost:** ~$0.02 to open a channel
-- **Per request:** $0.0001–$0.01 depending on service
-- **Setup time:** 30 seconds
+Supports two payment protocols:
+- **DRAIN** — Payment channels on Polygon. Open once, send many requests, close when done.
+- **MPP** — Per-request payments via Tempo. Each request is paid individually. No channel needed.
 
-## When to Use DRAIN
+| | DRAIN | MPP |
+|---|---|---|
+| Setup | Open channel ($0.02 gas) | None |
+| Per request | $0.0001–$0.01 | Varies by provider |
+| Best for | High-volume sessions | Single requests, REST APIs |
+| Payment | USDC on Polygon | USDC on Tempo chain |
 
-Use DRAIN when you need to:
-- Call any service (LLM, scraping, image generation, etc.) without API keys
-- Pay per-request with USDC on Polygon
-- Access multiple service types through one protocol
+## When to Use
 
-Do NOT use DRAIN when:
+Use drain-mcp when you need to:
+- Call any service (LLM, search, scraping, image gen, etc.) without API keys
+- Pay per-request with USDC — no subscriptions, no credit cards
+- Access 30+ providers through one unified interface
+
+Do NOT use drain-mcp when:
 - You already have API keys for the service you need
 - The task doesn't require external services
 
@@ -23,16 +30,29 @@ Do NOT use DRAIN when:
 
 ## TL;DR - Minimum Viable Workflow
 
+### MPP Providers (per-request, no channel)
+
 ```
-1. drain_providers()            → Find providers (filter by model or category)
-2. drain_provider_info(id)      → Get provider details + usage docs
-3. drain_balance()              → Check USDC + POL
-4. drain_approve()              → Approve USDC spending (once)
-5. drain_open_channel(...)      → Deposit USDC, get channelId
-6. drain_chat(...)              → Send requests (repeat as needed)
-7. drain_cooperative_close(...) → Close early, instant refund (when task is done)
+1. drain_providers(protocol: "mpp")  → Find MPP providers
+2. drain_provider_info(id)           → Read docs (essential for REST APIs)
+3. mpp_chat(provider, messages)      → LLM providers (auto-pay via Tempo)
+   — OR —
+   mpp_request(url, body)            → REST API providers (auto-pay via Tempo)
+4. drain_feedback(providerId, outcome) → Optional: report success/failure
+```
+
+### DRAIN Providers (payment channels)
+
+```
+1. drain_providers(protocol: "drain") → Find DRAIN providers
+2. drain_provider_info(id)            → Get provider details + usage docs
+3. drain_balance()                    → Check USDC + POL
+4. drain_approve()                    → Approve USDC spending (once)
+5. drain_open_channel(...)            → Deposit USDC, get channelId
+6. drain_chat(...)                    → Send requests (repeat as needed)
+7. drain_cooperative_close(...)       → Close early, instant refund (when done)
    — OR after expiry —
-8. drain_close_channel(...)     → Reclaim funds (after expiry)
+8. drain_close_channel(...)           → Reclaim funds (after expiry)
 ```
 
 ---
@@ -55,7 +75,9 @@ Do NOT use DRAIN when:
 
 ## Already Hit a 402?
 
-DRAIN providers return `402 Payment Required` with headers when no payment voucher is sent:
+**MPP providers:** drain-mcp handles 402 automatically via mppx/Tempo. Just use `mpp_chat` or `mpp_request` — payment is resolved transparently.
+
+**DRAIN providers** return `402 Payment Required` with headers when no payment voucher is sent:
 
 | Header | Value |
 |---|---|
@@ -66,7 +88,7 @@ DRAIN providers return `402 Payment Required` with headers when no payment vouch
 | `X-Payment-Signing` | URL for EIP-712 signing parameters |
 | `X-Payment-Docs` | Provider docs endpoint |
 
-**Flow:**
+**DRAIN Flow:**
 1. Call a provider endpoint (no voucher) → get `402` with headers
 2. Install `drain-mcp` or use the signing API at the `X-Payment-Signing` URL
 3. Open a channel to the `X-Payment-Provider` address
@@ -133,10 +155,10 @@ Check a channel's deposit, spending, remaining balance, and expiry.
 #### drain_channels
 List all known channels with status (active/expired/closed). Find expired channels that need closing.
 
-### Usage
+### Usage (DRAIN)
 
 #### drain_chat
-Send a paid request through a channel. Works for ALL provider types:
+Send a paid request through a DRAIN channel. Works for ALL DRAIN provider types:
 
 - **LLM providers:** Standard chat messages
 - **Non-LLM providers:** JSON payload in the user message content (check provider docs)
@@ -146,6 +168,44 @@ Send a paid request through a channel. Works for ALL provider types:
   "channelId": "0x...",
   "model": "gpt-4o",
   "messages": [{"role": "user", "content": "Hello"}]
+}
+```
+
+### Usage (MPP)
+
+#### mpp_chat
+Send a chat request to an MPP LLM provider. Payment is automatic via Tempo — no channel, no setup.
+
+```json
+{
+  "provider": "provider-id-or-url",
+  "messages": [{"role": "user", "content": "Hello"}],
+  "model": "optional-model-id"
+}
+```
+
+#### mpp_request
+Send a request to an MPP REST API service (Tavily, Brave, Wolfram, etc.). Payment is automatic via Tempo.
+
+```json
+{
+  "url": "https://tavily.mpp.paywithlocus.com/tavily/search",
+  "body": {"query": "AI agents", "max_results": 5}
+}
+```
+
+Read the provider's docs first (`drain_provider_info`) to find the correct endpoint paths and request format.
+
+### Quality Feedback
+
+#### drain_feedback
+Report success or failure after using any provider (DRAIN or MPP). Feeds the marketplace quality scoring system.
+
+```json
+{
+  "providerId": "provider-id",
+  "outcome": "success",
+  "reason": "accurate_result"
 }
 ```
 
@@ -209,7 +269,20 @@ Providers are not limited to LLM chat. Each provider has a `category` field and 
 
 ## Decision Trees
 
-### Starting a Session
+### Choosing a Protocol
+
+```
+What provider do I want?
+├── MPP provider (protocol="mpp")
+│   ├── mppType="llm" → mpp_chat(provider, messages)
+│   └── mppType="rest" → mpp_request(url, body)
+│   └── Done. Payment was automatic.
+│
+└── DRAIN provider (protocol="drain")
+    └── See DRAIN flow below
+```
+
+### Starting a DRAIN Session
 
 ```
 Do I have an active channel?
@@ -226,7 +299,7 @@ Do I have an active channel?
     │       │           └── drain_chat() → Send requests
 ```
 
-### Ending a Session
+### Ending a DRAIN Session
 
 ```
 Am I done with this task?
@@ -316,11 +389,12 @@ Returns 0.1 POL (~10K transactions). Sends only your public address.
 
 ### Environment Variables
 
-| Variable | Required | Default |
-|----------|----------|---------|
-| `DRAIN_PRIVATE_KEY` | Yes | — |
-| `DRAIN_CHAIN_ID` | No | 137 (Polygon) |
-| `DRAIN_RPC_URL` | No | Public RPC |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DRAIN_PRIVATE_KEY` | Yes | — | Polygon wallet private key (also used for MPP/Tempo) |
+| `DRAIN_CHAIN_ID` | No | 137 | 137 (Polygon) or 80002 (Amoy testnet) |
+| `DRAIN_RPC_URL` | No | Public RPC | Custom Polygon RPC endpoint |
+| `DRAIN_MPP_MAX_DEPOSIT` | No | 1 | Max USDC per MPP session deposit |
 
 ---
 
@@ -328,17 +402,21 @@ Returns 0.1 POL (~10K transactions). Sends only your public address.
 
 ### Key Handling
 `DRAIN_PRIVATE_KEY` is loaded into memory by the local MCP process. It is used for:
-1. EIP-712 voucher signing (off-chain, no network call)
+1. EIP-712 voucher signing for DRAIN channels (off-chain, no network call)
 2. On-chain transaction signing (signed locally, only the signature is broadcast)
+3. Tempo payment signing for MPP requests (handled by mppx, signed locally)
 
 The key is never transmitted to any server. Providers verify signatures against on-chain state.
 
 ### Spending Limits
-Exposure is capped by the smart contract:
+**DRAIN:** Exposure is capped by the smart contract:
 - Maximum spend = channel deposit (you choose the amount)
 - Channel has a fixed duration (you choose)
 - After expiry, unspent funds are reclaimable via `drain_close_channel`
-- No recurring charges, no stored payment methods
+
+**MPP:** Each request is paid individually at the provider's advertised price. No pre-deposit required.
+
+Both protocols: No recurring charges, no stored payment methods.
 
 ### What Leaves Your Machine
 - Public API queries to handshake58.com (provider list, config, channel status)
@@ -360,9 +438,12 @@ Every network request the MCP server makes:
 | handshake58.com/api/directory/config | GET | Nothing (reads fee wallet) | No |
 | handshake58.com/api/channels/status | GET | channelId (public on-chain data) | No |
 | handshake58.com/api/gas-station | POST | Wallet address | No |
+| handshake58.com/api/telemetry | POST | Provider ID, latency, status, cost | No |
+| handshake58.com/api/feedback | POST | Provider ID, outcome | No |
 | Provider apiUrl /v1/docs | GET | Nothing (fetches usage docs) | No |
-| Provider apiUrl /v1/chat/completions | POST | Request messages + signed voucher | No |
+| Provider apiUrl /v1/chat/completions | POST | Request messages + signed voucher (DRAIN) | No |
 | Provider apiUrl /v1/close-channel | POST | channelId + close signature | No |
+| MPP provider endpoint | POST | Request body + Tempo payment (via mppx) | No |
 | Polygon RPC (on-chain tx) | POST | Signed transactions | No |
 
 ### Safeguards

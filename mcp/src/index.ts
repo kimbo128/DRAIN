@@ -50,12 +50,13 @@ MCP TOOLS PROVIDED:
   drain_channel_status      Check channel status and balance
   drain_channels            List all known channels with status
   drain_chat                Send a paid request via DRAIN channel
-  mpp_chat                  Send a per-request payment to an MPP provider
+  mpp_chat                  Chat with MPP LLM provider (auto-pay via Tempo)
+    mpp_request               Call MPP REST API (auto-pay via Tempo)
   drain_feedback            Report quality feedback (success/failure)
 
 PROTOCOLS:
   DRAIN — Payment channels on Polygon. Use drain_open_channel -> drain_chat.
-  MPP   — Per-request HTTP 402 payments. Use mpp_chat directly.
+  MPP   — Per-request HTTP 402 payments (auto-paid via Tempo). Use mpp_chat or mpp_request.
 
 PROVIDER CATEGORIES:
   llm, image, audio, code, scraping, vpn, multi-modal, other
@@ -86,12 +87,14 @@ import { ChannelService } from './services/channel.js';
 import { ProviderService } from './services/provider.js';
 import { InferenceService } from './services/inference.js';
 import { TelemetryService } from './services/telemetry.js';
+import { MppPaymentService } from './services/mpp-payment.js';
 
 import { providerTools, listProviders, getProvider } from './tools/providers.js';
 import { balanceTools, getBalance, approveUsdc } from './tools/balance.js';
 import { channelTools, openChannel, closeChannel, cooperativeClose, getChannelStatus, listChannels } from './tools/channel.js';
 import { chatTools, chat } from './tools/chat.js';
 import { mppTools, mppChat } from './tools/mpp.js';
+import { mppRequestTools, mppRequest } from './tools/mpp-request.js';
 import { feedbackTools, submitFeedback } from './tools/feedback.js';
 
 // ============================================================================
@@ -106,6 +109,7 @@ class DrainMcpServer {
   private providerService: ProviderService;
   private inferenceService: InferenceService;
   private telemetryService: TelemetryService;
+  private mppPayment: MppPaymentService;
 
   constructor() {
     this.config = loadConfig();
@@ -117,12 +121,13 @@ class DrainMcpServer {
     this.providerService = new ProviderService(this.config);
     this.inferenceService = new InferenceService(this.channelService);
     this.telemetryService = new TelemetryService(this.config, account.address);
+    this.mppPayment = new MppPaymentService(this.config);
     
     // Create MCP server
     this.server = new Server(
       {
         name: 'drain-mcp',
-        version: '0.3.0',
+        version: '0.4.1',
       },
       {
         capabilities: {
@@ -144,6 +149,7 @@ class DrainMcpServer {
         ...channelTools,
         ...chatTools,
         ...mppTools,
+        ...mppRequestTools,
         ...feedbackTools,
       ],
     }));
@@ -219,12 +225,26 @@ class DrainMcpServer {
             result = await mppChat(
               this.providerService,
               this.telemetryService,
+              this.mppPayment,
               args as {
                 provider: string;
                 messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
                 model?: string;
                 maxTokens?: number;
                 temperature?: number;
+              }
+            );
+            break;
+
+          // MPP request (REST APIs)
+          case 'mpp_request':
+            result = await mppRequest(
+              this.telemetryService,
+              this.mppPayment,
+              args as {
+                url: string;
+                body?: Record<string, unknown>;
+                method?: string;
               }
             );
             break;
