@@ -1,6 +1,6 @@
 {
   "name": "drain-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "mcpName": "io.github.kimbo128/drain-mcp",
   "description": "MCP server for the Handshake58 AI marketplace. DRAIN payment channels, MPP per-request payments, quality feedback. Agents discover providers, pay, and report.",
   "repository": {

@@ -56,6 +56,13 @@ export async function openChannel(
     if (!provider) {
       throw new Error(`Provider "${args.provider}" not found. Use drain_providers to list available providers.`);
     }
+    if ((provider.protocol || 'drain') === 'mpp') {
+      const endpoint = provider.mppEndpoint || provider.apiUrl;
+      throw new Error(
+        `"${provider.name}" is an MPP provider — no payment channel needed. ` +
+        `Use mpp_chat(provider: "${endpoint}", messages: [...]) instead.`
+      );
+    }
     providerAddress = provider.providerAddress as Address;
     providerName = provider.name;
     resolvedProvider = provider;
