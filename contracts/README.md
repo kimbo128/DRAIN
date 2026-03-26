@@ -82,7 +82,7 @@ struct Voucher {
 
 ## Addresses
 
-| Network | USDC | DrainChannel |
-|---------|------|--------------|
-| Polygon Mainnet | `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359` | TBD |
-| Polygon Amoy | `0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582` | TBD |
+| Network | USDC | DrainChannel (V1) | DrainChannelV2 (ERC-8190) |
+|---------|------|--------------------|---------------------------|
+| Polygon Mainnet | `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359` | [`0x1C1918C99b6DcE977392E4131C91654d8aB71e64`](https://polygonscan.com/address/0x1C1918C99b6DcE977392E4131C91654d8aB71e64) | [`0x0C2B3aA1e80629D572b1f200e6DF3586B3946A8A`](https://polygonscan.com/address/0x0C2B3aA1e80629D572b1f200e6DF3586B3946A8A) |
+| Polygon Amoy | `0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582` | [`0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C`](https://amoy.polygonscan.com/address/0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C) | — |

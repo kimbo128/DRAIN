@@ -10,6 +10,9 @@ An open protocol for trustless, streaming micropayments between AI consumers and
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+[![ERC-8190](https://img.shields.io/badge/ERC-8190-blue?logo=ethereum)](https://ethereum-magicians.org/t/erc-8184-draft-payment-channels-with-signed-vouchers-streaming-micropayments-for-ai-agents/28012)
+
+> **[ERC-8190](https://ethereum-magicians.org/t/erc-8184-draft-payment-channels-with-signed-vouchers-streaming-micropayments-for-ai-agents/28012)**: This protocol is being formalized as an Ethereum standard — *Payment Channels with Signed Vouchers*. The ERC defines the minimal interface for unidirectional payment channels using EIP-712 signed vouchers, complementary to [ERC-8183](https://eips.ethereum.org/EIPS/eip-8183) (Agentic Commerce).
 
 ---
 
@@ -198,19 +201,20 @@ That's it! The MCP server auto-discovers providers from Handshake58.
 
 ---
 
-## Protocol Specification
+## Protocol Specification (ERC-8190)
 
-DRAIN defines three components:
+DRAIN implements **[ERC-8190: Payment Channels with Signed Vouchers](https://ethereum-magicians.org/t/erc-8184-draft-payment-channels-with-signed-vouchers-streaming-micropayments-for-ai-agents/28012)** — an Ethereum standard for streaming micropayments via EIP-712 signed vouchers.
 
-| Component                | Description                                      |
-| ------------------------ | ------------------------------------------------ |
-| **Smart Contract** | Immutable escrow and settlement logic            |
-| **Voucher Format** | EIP-712 typed signatures for off-chain payments  |
-| **API Standard**   | OpenAI-compatible interface with payment headers |
+| Component                | Description                                      | Standard |
+| ------------------------ | ------------------------------------------------ | -------- |
+| **Smart Contract** | Escrow and settlement logic (`IPaymentChannel`) | ERC-8190 (normative) |
+| **Voucher Format** | EIP-712 typed signatures for off-chain payments  | ERC-8190 (normative) |
+| **Service Interaction** | HTTP 402 discovery, cost reporting, error codes | ERC-8190 (RECOMMENDED) |
+| **API Standard**   | OpenAI-compatible interface with payment headers | Application layer |
 
-The protocol intentionally excludes provider discovery, reputation systems, dispute resolution, and governance. These layers can be built independently.
+The protocol intentionally excludes provider discovery, reputation systems, dispute resolution, and governance. See [ERC-8183](https://eips.ethereum.org/EIPS/eip-8183) (Agentic Commerce) and [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) (Trustless Agents) for complementary standards.
 
-Full specification: See `contracts/` for implementation details.
+Full specification: See `contracts/` for the Solidity implementation and the [ERC-8190 draft](https://github.com/ethereum/ERCs/pull/1592) for the formal standard.
 
 ## Security Model
 
@@ -438,8 +442,11 @@ Try DRAIN without writing code:
 
 | Network | Contract | Address |
 |---------|----------|---------|
-| **Polygon Mainnet** | DrainChannel | [`0x1C1918C99b6DcE977392E4131C91654d8aB71e64`](https://polygonscan.com/address/0x1C1918C99b6DcE977392E4131C91654d8aB71e64) |
+| **Polygon Mainnet** | DrainChannelV2 (ERC-8190) | [`0x0C2B3aA1e80629D572b1f200e6DF3586B3946A8A`](https://polygonscan.com/address/0x0C2B3aA1e80629D572b1f200e6DF3586B3946A8A) |
+| **Polygon Mainnet** | DrainChannel (V1, immutable) | [`0x1C1918C99b6DcE977392E4131C91654d8aB71e64`](https://polygonscan.com/address/0x1C1918C99b6DcE977392E4131C91654d8aB71e64) |
 | Polygon Amoy (Testnet) | DrainChannel | [`0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C`](https://amoy.polygonscan.com/address/0x61f1C1E04d6Da1C92D0aF1a3d7Dc0fEFc8794d7C) |
+
+DrainChannelV2 is the production contract used by [Handshake58](https://www.handshake58.com) and the ERC-8190 reference implementation. It adds cooperative close and optional platform fees over V1.
 
 
 ## Getting Started
