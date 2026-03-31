@@ -14,8 +14,7 @@ function requireEnv(name: string): string {
   if (!value) {
     console.error(`⚠️ Missing required environment variable: ${name}`);
     console.error(`Please set ${name} in Railway Variables`);
-    // Return placeholder to allow health check to work
-    return `MISSING_${name}`;
+    throw new Error(`Missing required environment variable: ${name}`);
   }
   return value;
 }
@@ -55,9 +54,15 @@ const DEFAULT_PRICING: Record<string, ModelPricing> = {
 export function loadConfig(): ProviderConfig {
   const chainIdStr = optionalEnv('CHAIN_ID', '137');
   const chainId = parseInt(chainIdStr) as 137 | 80002;
-  
+
   if (chainId !== 137 && chainId !== 80002) {
     throw new Error(`Invalid CHAIN_ID: ${chainId}. Must be 137 (mainnet) or 80002 (testnet).`);
+  }
+
+  // Security: Admin Key Validation
+  const adminKey = requireEnv('ADMIN_KEY');
+  if (adminKey.length < 32) {
+    throw new Error('FATAL: ADMIN_KEY is too weak. Must be at least 32 characters long.');
   }
 
   return {
@@ -69,6 +74,7 @@ export function loadConfig(): ProviderConfig {
     pricing: DEFAULT_PRICING,
     claimThreshold: BigInt(optionalEnv('CLAIM_THRESHOLD', '10000000')), // $10 default
     storagePath: optionalEnv('STORAGE_PATH', './data/vouchers.json'),
+    adminKey,
   };
 }
 
